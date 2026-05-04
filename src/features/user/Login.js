@@ -75,11 +75,6 @@ function Login(){
                         <div className='text-center mt-4'>Don't have an account yet? <Link to="/register"><span className="  inline-block  hover:text-primary hover:underline hover:cursor-pointer transition duration-200">Register</span></Link></div>
                     </form>
                     
-                    <div className="divider mt-8">Default Credentials</div>
-                    <div className="text-sm text-center space-y-2">
-                        <div><strong>Admin:</strong> admin@system.com / admin123</div>
-                        <div><strong>Owner:</strong> owner@test.com / owner123</div>
-                    </div>
                 </div>
             </div>
             </div>
