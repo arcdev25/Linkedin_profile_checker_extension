@@ -23,7 +23,7 @@ function DoughnutChart(){
         },
       };
       
-      const labels = ['Pending', 'Chatting', 'Not Interested', 'Success', 'Failed', 'Ghosted', 'Sent JS'];
+      const labels = ['Pending', 'Chatting', 'Not_interested', 'Success', 'Failed', 'Ghosted', 'Send_js'];
       
       const data = {
         labels,
@@ -33,11 +33,11 @@ function DoughnutChart(){
                 data: [
                     stats.statusCounts.pending || 0,
                     stats.statusCounts.chatting || 0,
-                    stats.statusCounts['not interested'] || 0,
+                    stats.statusCounts.not_interested || 0,
                     stats.statusCounts.success || 0,
                     stats.statusCounts.failed || 0,
                     stats.statusCounts.ghosted || 0,
-                    stats.statusCounts['sent js'] || 0,
+                    stats.statusCounts.send_js || 0,
                 ],
                 backgroundColor: [
                   'rgba(255, 206, 86, 0.8)',
