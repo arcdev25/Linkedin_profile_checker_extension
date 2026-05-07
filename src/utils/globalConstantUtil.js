@@ -7,7 +7,8 @@ module.exports = Object.freeze({
         DEFAULT : "",
         ACCOUNT_ADD_NEW : "ACCOUNT_ADD_NEW",
         ACCOUNT_EDIT : "ACCOUNT_EDIT",
-        CANDIDATE_ADD_NEW : "CANDIDATE_ADD_NEW"
+        CANDIDATE_ADD_NEW : "CANDIDATE_ADD_NEW",
+        CANDIDATE_RECONNECT : "CANDIDATE_RECONNECT"
     },
 
     RIGHT_DRAWER_TYPES : {
@@ -19,6 +20,7 @@ module.exports = Object.freeze({
         LEAD_DELETE : "LEAD_DELETE",
         ACCOUNT_DELETE : "ACCOUNT_DELETE",
         CANDIDATE_DELETE : "CANDIDATE_DELETE",
-        OWNER_DELETE : "OWNER_DELETE"
+        OWNER_DELETE : "OWNER_DELETE",
+        FAILED_CANDIDATE_DELETE : "FAILED_CANDIDATE_DELETE"
     },
 });

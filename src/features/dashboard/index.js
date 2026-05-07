@@ -16,15 +16,33 @@ import { useDispatch, useSelector } from 'react-redux'
 import {showNotification} from '../common/headerSlice'
 import DoughnutChart from './components/DoughnutChart'
 import { useEffect } from 'react'
-import { getDashboardStats } from './dashboardSlice'
+import { getDashboardStats, getAllOwners, setSelectedOwner } from './dashboardSlice'
 
 function Dashboard(){
     const dispatch = useDispatch()
-    const { stats, isLoading } = useSelector(state => state.dashboard)
+    const { stats, isLoading, owners, selectedOwnerId } = useSelector(state => state.dashboard)
+    const { user } = useSelector(state => state.auth)
+    const isAdmin = user?.role === 'admin'
 
     useEffect(() => {
+        // Load owners list if admin
+        if (isAdmin) {
+            dispatch(getAllOwners())
+        }
+        // Load initial stats
         dispatch(getDashboardStats())
-    }, [dispatch])
+    }, [dispatch, isAdmin])
+
+    // Reload stats when selected owner changes
+    useEffect(() => {
+        if (isAdmin && selectedOwnerId !== null) {
+            dispatch(getDashboardStats(selectedOwnerId))
+        }
+    }, [dispatch, isAdmin, selectedOwnerId])
+
+    const handleOwnerTabClick = (ownerId) => {
+        dispatch(setSelectedOwner(ownerId))
+    }
 
     const statsData = [
         {
@@ -79,6 +97,29 @@ function Dashboard(){
 
     return(
         <>
+        {/** ---------------------- Owner Tabs for Admin ------------------------- */}
+        {isAdmin && owners.length > 0 && (
+            <div className="mb-4">
+                <div className="tabs tabs-boxed bg-base-200">
+                    <button 
+                        className={`tab ${selectedOwnerId === null ? 'tab-active' : ''}`}
+                        onClick={() => handleOwnerTabClick(null)}
+                    >
+                        All Owners
+                    </button>
+                    {owners.map(owner => (
+                        <button 
+                            key={owner.id}
+                            className={`tab ${selectedOwnerId === owner.id ? 'tab-active' : ''}`}
+                            onClick={() => handleOwnerTabClick(owner.id)}
+                        >
+                            {owner.name}
+                        </button>
+                    ))}
+                </div>
+            </div>
+        )}
+
         {/** ---------------------- Select Period Content ------------------------- */}
             <DashboardTopBar updateDashboardPeriod={updateDashboardPeriod}/>
         

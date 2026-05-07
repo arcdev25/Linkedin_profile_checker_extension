@@ -8,6 +8,7 @@ const Page404 = lazy(() => import('../pages/protected/404'))
 const Blank = lazy(() => import('../pages/protected/Blank'))
 const Team = lazy(() => import('../pages/protected/Team'))
 const Candidates = lazy(() => import('../pages/protected/Candidates'))
+const FailedCandidates = lazy(() => import('../pages/protected/FailedCandidates'))
 const Bills = lazy(() => import('../pages/protected/Bills'))
 const ProfileSettings = lazy(() => import('../pages/protected/ProfileSettings'))
 const Accounts = lazy(() => import('../pages/protected/Accounts'))
@@ -38,6 +39,10 @@ const routes = [
   {
     path: '/candidates',
     component: Candidates,
+  },
+  {
+    path: '/failed-candidates',
+    component: FailedCandidates,
   },
   {
     path: '/settings-profile',

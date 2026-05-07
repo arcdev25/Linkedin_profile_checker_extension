@@ -7,6 +7,7 @@ import dashboardSlice from '../features/dashboard/dashboardSlice'
 import candidatesSlice from '../features/candidates/candidatesSlice'
 import authSlice from '../features/auth/authSlice'
 import ownersSlice from '../features/owners/ownersSlice'
+import failedCandidatesSlice from '../features/failedCandidates/failedCandidatesSlice'
 
 const combinedReducer = {
   header : headerSlice,
@@ -16,7 +17,8 @@ const combinedReducer = {
   dashboard : dashboardSlice,
   candidates : candidatesSlice,
   auth : authSlice,
-  owners : ownersSlice
+  owners : ownersSlice,
+  failedCandidates : failedCandidatesSlice
 }
 
 export default configureStore({

@@ -2,7 +2,7 @@ import moment from "moment"
 import { useEffect, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import TitleCard from "../../components/Cards/TitleCard"
-import { getCandidatesContent } from "./candidatesSlice"
+import { getCandidatesContent, getNeedReconnectionCandidates } from "./candidatesSlice"
 import FunnelIcon from '@heroicons/react/24/outline/FunnelIcon'
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import SearchBar from "../../components/Input/SearchBar"
@@ -10,10 +10,12 @@ import TrashIcon from '@heroicons/react/24/outline/TrashIcon'
 import { openModal } from "../common/modalSlice"
 import { CONFIRMATION_MODAL_CLOSE_TYPES, MODAL_BODY_TYPES } from '../../utils/globalConstantUtil'
 
-const TopSideButtons = ({removeFilter, applyFilter, applySearch, openAddModal}) => {
+const TopSideButtons = ({removeFilter, applyFilter, applySearch, openAddModal, activeTab}) => {
     const [filterParam, setFilterParam] = useState("")
     const [searchText, setSearchText] = useState("")
-    const statusFilters = ["pending", "chatting", "sent js", "not interested", "success", "failed", "ghosted"]
+    const statusFilters = activeTab === 'main' 
+        ? ["pending", "chatting", "sent js", "not interested", "success", "ghosted"]
+        : [] // No filters for need reconnection tab
 
     const showFiltersAndApply = (params) => {
         applyFilter(params)
@@ -38,47 +40,63 @@ const TopSideButtons = ({removeFilter, applyFilter, applySearch, openAddModal}) 
         <div className="inline-block float-right">
             <SearchBar searchText={searchText} styleClass="mr-4" setSearchText={setSearchText}/>
             {filterParam !== "" && <button onClick={() => removeAppliedFilter()} className="btn btn-xs mr-2 btn-active btn-ghost normal-case">{filterParam}<XMarkIcon className="w-4 ml-2"/></button>}
-            <div className="dropdown dropdown-bottom dropdown-end  mr-4">
-                <label tabIndex={0} className="btn btn-sm btn-outline"><FunnelIcon className="w-5 mr-2"/>Filter</label>
-                <ul tabIndex={0} className="dropdown-content menu p-2 text-sm shadow bg-base-100 rounded-box w-52">
-                    {
-                        statusFilters.map((l, k) => {
-                            return  <li key={k}><a onClick={() => showFiltersAndApply(l)}>{l}</a></li>
-                        })
-                    }
-                    <div className="divider mt-0 mb-0"></div>
-                    <li><a onClick={() => removeAppliedFilter()}>Remove Filter</a></li>
-                </ul>
-            </div>
-            <button className="btn px-6 btn-sm normal-case btn-primary" onClick={() => openAddModal()}>Add New</button>
+            {activeTab === 'main' && (
+                <div className="dropdown dropdown-bottom dropdown-end  mr-4">
+                    <label tabIndex={0} className="btn btn-sm btn-outline"><FunnelIcon className="w-5 mr-2"/>Filter</label>
+                    <ul tabIndex={0} className="dropdown-content menu p-2 text-sm shadow bg-base-100 rounded-box w-52">
+                        {
+                            statusFilters.map((l, k) => {
+                                return  <li key={k}><a onClick={() => showFiltersAndApply(l)}>{l}</a></li>
+                            })
+                        }
+                        <div className="divider mt-0 mb-0"></div>
+                        <li><a onClick={() => removeAppliedFilter()}>Remove Filter</a></li>
+                    </ul>
+                </div>
+            )}
+            {activeTab === 'main' && (
+                <button className="btn px-6 btn-sm normal-case btn-primary" onClick={() => openAddModal()}>Add New</button>
+            )}
         </div>
     )
 }
 
 function Candidates(){
-    const { candidates, isLoading } = useSelector(state => state.candidates)
+    const { candidates, needReconnection, isLoading } = useSelector(state => state.candidates)
     const dispatch = useDispatch()
     const [filteredCandidates, setFilteredCandidates] = useState([])
+    const [activeTab, setActiveTab] = useState('main')
 
     useEffect(() => {
         dispatch(getCandidatesContent())
+        dispatch(getNeedReconnectionCandidates())
     }, [dispatch])
 
     useEffect(() => {
-        setFilteredCandidates(candidates)
-    }, [candidates])
+        if (activeTab === 'main') {
+            setFilteredCandidates(candidates)
+        } else {
+            setFilteredCandidates(needReconnection)
+        }
+    }, [candidates, needReconnection, activeTab])
 
     const removeFilter = () => {
-        setFilteredCandidates(candidates)
+        if (activeTab === 'main') {
+            setFilteredCandidates(candidates)
+        } else {
+            setFilteredCandidates(needReconnection)
+        }
     }
 
     const applyFilter = (params) => {
-        let filtered = candidates.filter((c) => c.status === params)
+        const sourceData = activeTab === 'main' ? candidates : needReconnection
+        let filtered = sourceData.filter((c) => c.status === params)
         setFilteredCandidates(filtered)
     }
 
     const applySearch = (value) => {
-        let filtered = candidates.filter((c) => {
+        const sourceData = activeTab === 'main' ? candidates : needReconnection
+        let filtered = sourceData.filter((c) => {
             return c.name.toLowerCase().includes(value.toLowerCase()) || 
                    c.email?.toLowerCase().includes(value.toLowerCase()) ||
                    c.headline?.toLowerCase().includes(value.toLowerCase())
@@ -102,6 +120,14 @@ function Candidates(){
         }))
     }
 
+    const reconnectCandidate = (candidate) => {
+        dispatch(openModal({
+            title : "Reconnect Candidate", 
+            bodyType : MODAL_BODY_TYPES.CANDIDATE_RECONNECT, 
+            extraObject : { candidate }
+        }))
+    }
+
     const getStatusBadge = (status) => {
         const statusMap = {
             'pending': 'badge-warning',
@@ -118,8 +144,26 @@ function Candidates(){
 
     return(
         <>
+            {/** ---------------------- Tabs ------------------------- */}
+            <div className="mb-4">
+                <div className="tabs tabs-boxed bg-base-200">
+                    <button 
+                        className={`tab ${activeTab === 'main' ? 'tab-active' : ''}`}
+                        onClick={() => setActiveTab('main')}
+                    >
+                        Main
+                    </button>
+                    <button 
+                        className={`tab ${activeTab === 'reconnection' ? 'tab-active' : ''}`}
+                        onClick={() => setActiveTab('reconnection')}
+                    >
+                        Need Reconnection {needReconnection.length > 0 && `(${needReconnection.length})`}
+                    </button>
+                </div>
+            </div>
+
             <TitleCard 
-                title="Candidates" 
+                title={activeTab === 'main' ? "Candidates" : "Need Reconnection"} 
                 topMargin="mt-2" 
                 TopSideButtons={
                     <TopSideButtons 
@@ -127,6 +171,7 @@ function Candidates(){
                         applyFilter={applyFilter} 
                         removeFilter={removeFilter}
                         openAddModal={openAddNewCandidateModal}
+                        activeTab={activeTab}
                     />
                 }
             >
@@ -139,7 +184,7 @@ function Candidates(){
                             <th>Status</th>
                             <th>Recruiter</th>
                             <th>Last Contact</th>
-                            <th></th>
+                            <th>{activeTab === 'reconnection' ? 'Actions' : ''}</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -152,7 +197,7 @@ function Candidates(){
                                     <td colSpan="6" className="text-center">No candidates found</td>
                                 </tr>
                             ) : (
-                                filteredCandidates.map((candidate, k) => {
+                                filteredCandidates.map((candidate) => {
                                     return(
                                         <tr key={candidate.id}>
                                         <td>
@@ -179,9 +224,20 @@ function Candidates(){
                                         <td>{candidate.recruiterName}</td>
                                         <td>{moment(candidate.lastContactDate).format("DD MMM YY")}</td>
                                         <td>
-                                            <button className="btn btn-square btn-ghost" onClick={() => deleteCurrentCandidate(candidate.id)}>
-                                                <TrashIcon className="w-5"/>
-                                            </button>
+                                            {activeTab === 'reconnection' ? (
+                                                <div className="flex gap-2">
+                                                    <button className="btn btn-sm btn-primary" onClick={() => reconnectCandidate(candidate)}>
+                                                        Reconnect
+                                                    </button>
+                                                    <button className="btn btn-square btn-sm btn-ghost" onClick={() => deleteCurrentCandidate(candidate.id)}>
+                                                        <TrashIcon className="w-5"/>
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <button className="btn btn-square btn-ghost" onClick={() => deleteCurrentCandidate(candidate.id)}>
+                                                    <TrashIcon className="w-5"/>
+                                                </button>
+                                            )}
                                         </td>
                                         </tr>
                                     )

@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux'
 import { closeModal } from '../features/common/modalSlice'
 import AddAccountModalBody from '../features/accounts/components/AddLeadModalBody'
 import AddCandidateModalBody from '../features/candidates/components/AddCandidateModalBody'
+import ReconnectCandidateModalBody from '../features/candidates/components/ReconnectCandidateModalBody'
 import ConfirmationModalBody from '../features/common/components/ConfirmationModalBody'
 
 
@@ -35,6 +36,7 @@ function ModalLayout(){
                              [MODAL_BODY_TYPES.ACCOUNT_ADD_NEW] : <AddAccountModalBody closeModal={close} extraObject={extraObject}/>,
                              [MODAL_BODY_TYPES.ACCOUNT_EDIT] : <AddAccountModalBody closeModal={close} extraObject={extraObject}/>,
                              [MODAL_BODY_TYPES.CANDIDATE_ADD_NEW] : <AddCandidateModalBody closeModal={close} extraObject={extraObject}/>,
+                             [MODAL_BODY_TYPES.CANDIDATE_RECONNECT] : <ReconnectCandidateModalBody closeModal={close} extraObject={extraObject}/>,
                              [MODAL_BODY_TYPES.CONFIRMATION] : <ConfirmationModalBody extraObject={extraObject} closeModal={close}/>,
                              [MODAL_BODY_TYPES.DEFAULT] : <div></div>
                     }[bodyType]

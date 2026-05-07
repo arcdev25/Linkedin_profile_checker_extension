@@ -85,6 +85,16 @@ export const deleteAccountFromDb = createAsyncThunk('/accounts/delete', async (i
         }
     }
 
+    // Before deleting recruiter, update all their contacts to "need reconnection"
+    const { error: updateError } = await supabase
+        .from('contacts')
+        .update({ status: 'need reconnection' })
+        .eq('recruiter_id', id)
+        .neq('status', 'failed') // Don't change failed candidates
+    
+    if (updateError) throw updateError
+
+    // Now delete the recruiter
     const { error } = await supabase
         .from('recruiters')
         .delete()
