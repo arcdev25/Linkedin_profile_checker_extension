@@ -8,8 +8,7 @@ import { addAccountToDb, updateAccountInDb } from "../accountSlice"
 const INITIAL_ACCOUNT_OBJ = {
     name: "",
     email: "",
-    company: "",
-    owner_name: ""
+    company: ""
 }
 
 function AddAccountModalBody({closeModal, extraObject}){
@@ -29,8 +28,7 @@ function AddAccountModalBody({closeModal, extraObject}){
                     const updates = {
                         name: accountObj.name,
                         email: accountObj.email,
-                        company: accountObj.company,
-                        owner_name: accountObj.owner_name
+                        company: accountObj.company
                     }
                     await dispatch(updateAccountInDb({ id: accountObj.id, updates })).unwrap()
                     dispatch(showNotification({message : "Recruiter Updated!", status : 1}))
@@ -39,8 +37,7 @@ function AddAccountModalBody({closeModal, extraObject}){
                     const newAccountObj = {
                         name: accountObj.name,
                         email: accountObj.email,
-                        company: accountObj.company,
-                        owner_name: accountObj.owner_name
+                        company: accountObj.company
                     }
                     await dispatch(addAccountToDb(newAccountObj)).unwrap()
                     dispatch(showNotification({message : "New Recruiter Added!", status : 1}))
@@ -85,15 +82,6 @@ function AddAccountModalBody({closeModal, extraObject}){
                 updateType="company" 
                 containerStyle="mt-4" 
                 labelTitle="Company" 
-                updateFormValue={updateFormValue}
-            />
-
-            <InputText 
-                type="text" 
-                defaultValue={accountObj.owner_name} 
-                updateType="owner_name" 
-                containerStyle="mt-4" 
-                labelTitle="Owner Name" 
                 updateFormValue={updateFormValue}
             />
 

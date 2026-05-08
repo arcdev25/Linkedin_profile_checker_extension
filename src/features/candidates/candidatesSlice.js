@@ -6,58 +6,37 @@ export const getNeedReconnectionCandidates = createAsyncThunk('/candidates/needR
     const { auth } = getState()
     const user = auth.user
 
-    if (user?.role === 'admin') {
-        // Admin sees all orphaned contacts
-        const { data: contacts, error } = await supabase
-            .from('contacts')
-            .select(`
-                *,
-                profiles (*),
-                recruiters (name, owner_id)
-            `)
-            .eq('status', 'need reconnection')
-            .order('contacted_at', { ascending: false })
-        
-        if (error) throw error
-
-        const candidates = contacts.map(contact => ({
-            ...contact.profiles,
-            status: contact.status,
-            lastContactDate: contact.contacted_at,
-            recruiterName: contact.recruiters?.name || 'Deleted Recruiter',
-            notes: contact.notes || '',
-            contactId: contact.id
-        }))
-
-        return candidates
-    } else {
-        // Owner sees only their orphaned contacts
-        const { data: contacts, error } = await supabase
-            .from('contacts')
-            .select(`
-                *,
-                profiles (*),
-                recruiters (name, owner_id)
-            `)
-            .eq('status', 'need reconnection')
-            .order('contacted_at', { ascending: false })
-        
-        if (error) throw error
-
-        // Filter by owner
-        const candidates = contacts
-            .filter(contact => contact.recruiters?.owner_id === user.id)
-            .map(contact => ({
-                ...contact.profiles,
-                status: contact.status,
-                lastContactDate: contact.contacted_at,
-                recruiterName: contact.recruiters?.name || 'Deleted Recruiter',
-                notes: contact.notes || '',
-                contactId: contact.id
-            }))
-
-        return candidates
+    // Build query based on role
+    let query = supabase
+        .from('contacts')
+        .select(`
+            *,
+            profiles (*)
+        `)
+        .eq('status', 'need reconnection')
+        .order('contacted_at', { ascending: false })
+    
+    // For owners, filter by owner_id
+    if (user?.role === 'owner') {
+        query = query.eq('owner_id', user.id)
     }
+
+    const { data: contacts, error } = await query
+    
+    if (error) throw error
+
+    const candidates = contacts.map(contact => ({
+        ...contact.profiles,
+        status: contact.status,
+        lastContactDate: contact.contacted_at,
+        recruiterName: 'Deleted Recruiter',
+        notes: contact.notes || '',
+        contactId: contact.id,
+        recruiterId: contact.recruiter_id,
+        ownerId: contact.owner_id
+    }))
+
+    return candidates
 })
 
 export const getCandidatesContent = createAsyncThunk('/candidates/content', async (_, { getState }) => {

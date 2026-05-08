@@ -3,6 +3,34 @@
 ## Overview
 This feature implements a comprehensive system for managing failed candidates and handling candidate reconnection when recruiters are deleted.
 
+## ⚠️ IMPORTANT: Database Schema Requirement
+
+**Before using this feature, you MUST run `database_schema_fix.sql` in your Supabase SQL Editor.**
+
+This ensures that:
+1. Contacts are NOT deleted when a recruiter is deleted
+2. The "need reconnection" status is properly supported
+3. Foreign key constraint uses `ON DELETE SET NULL` instead of `ON DELETE CASCADE`
+
+Without this fix, deleting a recruiter will delete all their contacts from the database!
+
+## How It Works
+
+### When You Delete a Recruiter:
+1. **Candidates are NOT deleted** - they are preserved in the database
+2. **Non-failed candidates** → Status changed to "need reconnection" → Appear in "Need Reconnection" tab
+3. **Failed candidates** → Status remains "failed" → Stay in Failed Candidates page
+4. **Recruiter is deleted** → But all contact records remain
+
+### Visual Flow:
+```
+Delete Recruiter
+    ↓
+Check each contact:
+    ├─ Status = "failed" → Keep as "failed" → Failed Candidates Page
+    └─ Status = other → Change to "need reconnection" → Need Reconnection Tab
+```
+
 ## Features Implemented
 
 ### 1. Failed Candidates Page

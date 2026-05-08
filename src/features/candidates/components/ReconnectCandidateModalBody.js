@@ -28,8 +28,8 @@ function ReconnectCandidateModalBody({closeModal, extraObject}){
     const statusOptions = [
         { name: "Pending", value: "pending" },
         { name: "Chatting", value: "chatting" },
-        { name: "Send_js", value: "send_js" },
-        { name: "Not_interested", value: "not_interested" },
+        { name: "Sent JS", value: "sent js" },
+        { name: "Not Interested", value: "not interested" },
         { name: "Success", value: "success" },
         { name: "Ghosted", value: "ghosted" }
     ]

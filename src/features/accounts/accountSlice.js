@@ -72,27 +72,41 @@ export const deleteAccountFromDb = createAsyncThunk('/accounts/delete', async (i
     const { auth } = getState()
     const user = auth.user
 
+    // Get recruiter info before deleting
+    const { data: recruiter } = await supabase
+        .from('recruiters')
+        .select('owner_id')
+        .eq('id', id)
+        .single()
+
     // Verify ownership before delete (for owners)
     if (user?.role === 'owner') {
-        const { data: existing } = await supabase
-            .from('recruiters')
-            .select('owner_id')
-            .eq('id', id)
-            .single()
-        
-        if (existing?.owner_id !== user.id) {
+        if (recruiter?.owner_id !== user.id) {
             throw new Error('You can only delete your own recruiters')
         }
     }
 
-    // Before deleting recruiter, update all their contacts to "need reconnection"
+    // Update ALL contacts for this recruiter to preserve owner_id
+    // This includes both "need reconnection" and "failed" candidates
     const { error: updateError } = await supabase
         .from('contacts')
-        .update({ status: 'need reconnection' })
+        .update({ 
+            owner_id: recruiter?.owner_id // Preserve owner_id for all contacts
+        })
         .eq('recruiter_id', id)
-        .neq('status', 'failed') // Don't change failed candidates
     
     if (updateError) throw updateError
+
+    // Update non-failed contacts to "need reconnection"
+    const { error: statusError } = await supabase
+        .from('contacts')
+        .update({ 
+            status: 'need reconnection'
+        })
+        .eq('recruiter_id', id)
+        .neq('status', 'failed') // Don't change failed candidates' status
+    
+    if (statusError) throw statusError
 
     // Now delete the recruiter
     const { error } = await supabase

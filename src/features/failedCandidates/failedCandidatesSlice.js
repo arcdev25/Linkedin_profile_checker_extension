@@ -5,92 +5,52 @@ export const getFailedCandidatesContent = createAsyncThunk('/failedCandidates/co
     const { auth } = getState()
     const user = auth.user
 
-    if (user?.role === 'admin') {
-        // Admin sees all failed candidates
-        const { data: contacts, error } = await supabase
-            .from('contacts')
-            .select(`
-                *,
-                profiles (*),
-                recruiters (name, owner_id)
-            `)
-            .eq('status', 'failed')
-            .order('contacted_at', { ascending: false })
-        
-        if (error) throw error
-
-        const candidates = contacts.map(contact => ({
-            ...contact.profiles,
-            status: contact.status,
-            lastContactDate: contact.contacted_at,
-            recruiterName: contact.recruiters?.name || 'Unknown',
-            notes: contact.notes || '',
-            contactId: contact.id
-        }))
-
-        return candidates
-    } else {
-        // Owner sees only their failed candidates
-        const { data: recruiters, error: recruitersError } = await supabase
-            .from('recruiters')
-            .select('id')
-            .eq('owner_id', user.id)
-        
-        if (recruitersError) throw recruitersError
-
-        const recruiterIds = recruiters.map(r => r.id)
-
-        if (recruiterIds.length === 0) {
-            return []
-        }
-
-        const { data: contacts, error: contactsError } = await supabase
-            .from('contacts')
-            .select(`
-                *,
-                profiles (*),
-                recruiters (name)
-            `)
-            .in('recruiter_id', recruiterIds)
-            .eq('status', 'failed')
-            .order('contacted_at', { ascending: false })
-        
-        if (contactsError) throw contactsError
-
-        const candidates = contacts.map(contact => ({
-            ...contact.profiles,
-            status: contact.status,
-            lastContactDate: contact.contacted_at,
-            recruiterName: contact.recruiters?.name || 'Unknown',
-            notes: contact.notes || '',
-            contactId: contact.id
-        }))
-
-        return candidates
+    // Build query based on role
+    let query = supabase
+        .from('contacts')
+        .select(`
+            *,
+            profiles (*),
+            recruiters (name)
+        `)
+        .eq('status', 'failed')
+        .order('contacted_at', { ascending: false })
+    
+    // For owners, filter by owner_id
+    if (user?.role === 'owner') {
+        query = query.eq('owner_id', user.id)
     }
+
+    const { data: contacts, error } = await query
+    
+    if (error) throw error
+
+    const candidates = contacts.map(contact => ({
+        ...contact.profiles,
+        status: contact.status,
+        lastContactDate: contact.contacted_at,
+        recruiterName: contact.recruiters?.name || 'Deleted Recruiter',
+        notes: contact.notes || '',
+        contactId: contact.id
+    }))
+
+    return candidates
 })
 
 export const deleteFailedCandidateFromDb = createAsyncThunk('/failedCandidates/delete', async (id, { getState }) => {
     const { auth } = getState()
     const user = auth.user
 
-    // For owners, verify they have contacted this candidate
+    // For owners, verify they own this candidate
     if (user?.role === 'owner') {
-        const { data: recruiters } = await supabase
-            .from('recruiters')
-            .select('id')
-            .eq('owner_id', user.id)
-        
-        const recruiterIds = recruiters?.map(r => r.id) || []
-
         const { data: contacts } = await supabase
             .from('contacts')
-            .select('id')
+            .select('id, owner_id')
             .eq('profile_id', id)
-            .in('recruiter_id', recruiterIds)
+            .eq('owner_id', user.id)
         
         if (!contacts || contacts.length === 0) {
-            throw new Error('You can only delete candidates you have contacted')
+            throw new Error('You can only delete your own candidates')
         }
     }
 

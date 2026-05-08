@@ -60,7 +60,6 @@ function Accounts(){
                             <th>Name</th>
                             <th>Email</th>
                             <th>Company</th>
-                            <th>Owner</th>
                             <th>Created At</th>
                             <th></th>
                         </tr>
@@ -68,11 +67,11 @@ function Accounts(){
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan="6" className="text-center">Loading...</td>
+                                    <td colSpan="5" className="text-center">Loading...</td>
                                 </tr>
                             ) : accounts.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" className="text-center">No recruiters found</td>
+                                    <td colSpan="5" className="text-center">No recruiters found</td>
                                 </tr>
                             ) : (
                                 accounts.map((account) => {
@@ -83,7 +82,6 @@ function Accounts(){
                                         </td>
                                         <td>{account.email || 'N/A'}</td>
                                         <td>{account.company || 'N/A'}</td>
-                                        <td>{account.owner_name || 'N/A'}</td>
                                         <td>{moment(account.created_at).format("DD MMM YY")}</td>
                                         <td>
                                             <div className="flex gap-2">
