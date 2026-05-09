@@ -1,6 +1,4 @@
 import DashboardStats from './components/DashboardStats'
-import AmountStats from './components/AmountStats'
-import PageStats from './components/PageStats'
 
 import ChatBubbleBottomCenterIcon  from '@heroicons/react/24/outline/ChatBubbleBottomCenterIcon'
 import UsersIcon  from '@heroicons/react/24/outline/UsersIcon'
@@ -15,33 +13,48 @@ import DashboardTopBar from './components/DashboardTopBar'
 import { useDispatch, useSelector } from 'react-redux'
 import {showNotification} from '../common/headerSlice'
 import DoughnutChart from './components/DoughnutChart'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { getDashboardStats, getAllOwners, setSelectedOwner } from './dashboardSlice'
+import moment from 'moment'
+
+const DASHBOARD_TIMEZONE_OFFSET = 180
+const dashboardNow = () => moment().utcOffset(DASHBOARD_TIMEZONE_OFFSET)
 
 function Dashboard(){
     const dispatch = useDispatch()
     const { stats, isLoading, owners, selectedOwnerId } = useSelector(state => state.dashboard)
     const { user } = useSelector(state => state.auth)
     const isAdmin = user?.role === 'admin'
+    const [dateRange, setDateRange] = useState({
+        startDate: dashboardNow().format('YYYY-MM-DD'),
+        endDate: dashboardNow().format('YYYY-MM-DD')
+    })
 
     useEffect(() => {
         // Load owners list if admin
         if (isAdmin) {
             dispatch(getAllOwners())
         }
-        // Load initial stats
-        dispatch(getDashboardStats())
     }, [dispatch, isAdmin])
 
-    // Reload stats when selected owner changes
+    // Load stats when the owner or date range changes
     useEffect(() => {
-        if (isAdmin && selectedOwnerId !== null) {
-            dispatch(getDashboardStats(selectedOwnerId))
-        }
-    }, [dispatch, isAdmin, selectedOwnerId])
+        dispatch(getDashboardStats({ 
+            ownerId: selectedOwnerId,
+            dateRange: dateRange 
+        }))
+    }, [dispatch, selectedOwnerId, dateRange])
 
     const handleOwnerTabClick = (ownerId) => {
         dispatch(setSelectedOwner(ownerId))
+    }
+
+    const updateDashboardPeriod = (newDateRange) => {
+        setDateRange(newDateRange)
+        dispatch(showNotification({
+            message: `Data filtered from ${newDateRange.startDate} to ${newDateRange.endDate}`, 
+            status: 1
+        }))
     }
 
     const statsData = [
@@ -83,10 +96,6 @@ function Dashboard(){
         },
     ]
 
-    const updateDashboardPeriod = (newRange) => {
-        dispatch(showNotification({message : `Period updated to ${newRange.startDate} to ${newRange.endDate}`, status : 1}))
-    }
-
     if (isLoading) {
         return (
             <div className="flex items-center justify-center h-screen">
@@ -121,7 +130,7 @@ function Dashboard(){
         )}
 
         {/** ---------------------- Select Period Content ------------------------- */}
-            <DashboardTopBar updateDashboardPeriod={updateDashboardPeriod}/>
+            <DashboardTopBar dateRange={dateRange} updateDashboardPeriod={updateDashboardPeriod}/>
         
         {/** ---------------------- Different stats content 1 ------------------------- */}
             <div className="grid lg:grid-cols-6 mt-2 md:grid-cols-2 grid-cols-1 gap-6">
@@ -140,13 +149,6 @@ function Dashboard(){
                 <BarChart />
             </div>
             
-        {/** ---------------------- Different stats content 2 ------------------------- */}
-        
-            <div className="grid lg:grid-cols-2 mt-10 grid-cols-1 gap-6">
-                <AmountStats />
-                <PageStats />
-            </div>
-
         {/** ---------------------- User source channels table  ------------------------- */}
         
             <div className="grid lg:grid-cols-2 mt-4 grid-cols-1 gap-6">

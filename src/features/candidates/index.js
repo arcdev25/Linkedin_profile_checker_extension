@@ -9,31 +9,23 @@ import SearchBar from "../../components/Input/SearchBar"
 import TrashIcon from '@heroicons/react/24/outline/TrashIcon'
 import { openModal } from "../common/modalSlice"
 import { CONFIRMATION_MODAL_CLOSE_TYPES, MODAL_BODY_TYPES } from '../../utils/globalConstantUtil'
+import Pagination from "../../components/Pagination/Pagination"
 
-const TopSideButtons = ({removeFilter, applyFilter, applySearch, openAddModal, activeTab}) => {
-    const [filterParam, setFilterParam] = useState("")
-    const [searchText, setSearchText] = useState("")
+const TopSideButtons = ({removeFilter, applyFilter, applySearch, openAddModal, activeTab, filterParam, searchText, setSearchText}) => {
     const statusFilters = activeTab === 'main' 
         ? ["pending", "chatting", "sent js", "not interested", "success", "ghosted"]
         : [] // No filters for need reconnection tab
 
     const showFiltersAndApply = (params) => {
         applyFilter(params)
-        setFilterParam(params)
     }
 
     const removeAppliedFilter = () => {
         removeFilter()
-        setFilterParam("")
-        setSearchText("")
     }
 
     useEffect(() => {
-        if(searchText === ""){
-            removeAppliedFilter()
-        }else{
-            applySearch(searchText)
-        }
+        applySearch(searchText)
     }, [searchText])
 
     return(
@@ -62,46 +54,60 @@ const TopSideButtons = ({removeFilter, applyFilter, applySearch, openAddModal, a
 }
 
 function Candidates(){
-    const { candidates, needReconnection, isLoading } = useSelector(state => state.candidates)
+    const { candidates, needReconnection, totalCount, needReconnectionTotalCount, isLoading } = useSelector(state => state.candidates)
     const dispatch = useDispatch()
-    const [filteredCandidates, setFilteredCandidates] = useState([])
     const [activeTab, setActiveTab] = useState('main')
-
-    useEffect(() => {
-        dispatch(getCandidatesContent())
-        dispatch(getNeedReconnectionCandidates())
-    }, [dispatch])
+    const [currentPage, setCurrentPage] = useState(1)
+    const [searchText, setSearchText] = useState("")
+    const [filterParam, setFilterParam] = useState("")
+    const itemsPerPage = 10
 
     useEffect(() => {
         if (activeTab === 'main') {
-            setFilteredCandidates(candidates)
+            dispatch(getCandidatesContent({ 
+                page: currentPage, 
+                limit: itemsPerPage,
+                searchTerm: searchText,
+                statusFilter: filterParam
+            }))
         } else {
-            setFilteredCandidates(needReconnection)
+            dispatch(getNeedReconnectionCandidates({ 
+                page: currentPage, 
+                limit: itemsPerPage,
+                searchTerm: searchText
+            }))
         }
-    }, [candidates, needReconnection, activeTab])
+    }, [dispatch, currentPage, activeTab, searchText, filterParam])
+
+    const currentData = activeTab === 'main' ? candidates : needReconnection
+    const currentTotalCount = activeTab === 'main' ? totalCount : needReconnectionTotalCount
+    const totalPages = Math.ceil(currentTotalCount / itemsPerPage)
+
+    const handlePageChange = (page) => {
+        setCurrentPage(page)
+    }
+
+    const handleTabChange = (tab) => {
+        setActiveTab(tab)
+        setCurrentPage(1)
+        setSearchText("")
+        setFilterParam("")
+    }
 
     const removeFilter = () => {
-        if (activeTab === 'main') {
-            setFilteredCandidates(candidates)
-        } else {
-            setFilteredCandidates(needReconnection)
-        }
+        setFilterParam("")
+        setSearchText("")
+        setCurrentPage(1)
     }
 
     const applyFilter = (params) => {
-        const sourceData = activeTab === 'main' ? candidates : needReconnection
-        let filtered = sourceData.filter((c) => c.status === params)
-        setFilteredCandidates(filtered)
+        setFilterParam(params)
+        setCurrentPage(1)
     }
 
     const applySearch = (value) => {
-        const sourceData = activeTab === 'main' ? candidates : needReconnection
-        let filtered = sourceData.filter((c) => {
-            return c.name.toLowerCase().includes(value.toLowerCase()) || 
-                   c.email?.toLowerCase().includes(value.toLowerCase()) ||
-                   c.headline?.toLowerCase().includes(value.toLowerCase())
-        })
-        setFilteredCandidates(filtered)
+        setSearchText(value)
+        setCurrentPage(1)
     }
 
     const openAddNewCandidateModal = () => {
@@ -149,15 +155,15 @@ function Candidates(){
                 <div className="tabs tabs-boxed bg-base-200">
                     <button 
                         className={`tab ${activeTab === 'main' ? 'tab-active' : ''}`}
-                        onClick={() => setActiveTab('main')}
+                        onClick={() => handleTabChange('main')}
                     >
                         Main
                     </button>
                     <button 
                         className={`tab ${activeTab === 'reconnection' ? 'tab-active' : ''}`}
-                        onClick={() => setActiveTab('reconnection')}
+                        onClick={() => handleTabChange('reconnection')}
                     >
-                        Need Reconnection {needReconnection.length > 0 && `(${needReconnection.length})`}
+                        Need Reconnection {needReconnectionTotalCount > 0 && `(${needReconnectionTotalCount})`}
                     </button>
                 </div>
             </div>
@@ -172,6 +178,9 @@ function Candidates(){
                         removeFilter={removeFilter}
                         openAddModal={openAddNewCandidateModal}
                         activeTab={activeTab}
+                        filterParam={filterParam}
+                        searchText={searchText}
+                        setSearchText={setSearchText}
                     />
                 }
             >
@@ -179,10 +188,11 @@ function Candidates(){
                     <table className="table w-full">
                         <thead>
                         <tr>
+                            <th>#</th>
                             <th>Name</th>
                             <th>Headline</th>
                             <th>Status</th>
-                            <th>Recruiter</th>
+                            <th>Company</th>
                             <th>Last Contact</th>
                             <th>{activeTab === 'reconnection' ? 'Actions' : ''}</th>
                         </tr>
@@ -190,16 +200,18 @@ function Candidates(){
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan="6" className="text-center">Loading...</td>
+                                    <td colSpan="7" className="text-center">Loading...</td>
                                 </tr>
-                            ) : filteredCandidates.length === 0 ? (
+                            ) : currentData.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" className="text-center">No candidates found</td>
+                                    <td colSpan="7" className="text-center">No candidates found</td>
                                 </tr>
                             ) : (
-                                filteredCandidates.map((candidate) => {
+                                currentData.map((candidate, index) => {
+                                    const rowNumber = (currentPage - 1) * itemsPerPage + index + 1
                                     return(
                                         <tr key={candidate.id}>
+                                        <td>{rowNumber}</td>
                                         <td>
                                             <div className="flex items-center space-x-3">
                                                 <div className="avatar">
@@ -246,6 +258,17 @@ function Candidates(){
                         </tbody>
                     </table>
                 </div>
+                
+                {/* Pagination */}
+                {!isLoading && currentTotalCount > 0 && (
+                    <Pagination 
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={handlePageChange}
+                        totalItems={currentTotalCount}
+                        itemsPerPage={itemsPerPage}
+                    />
+                )}
             </TitleCard>
         </>
     )

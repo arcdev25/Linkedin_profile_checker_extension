@@ -12,6 +12,7 @@ import {
 import { Line } from 'react-chartjs-2';
 import { useSelector } from 'react-redux';
 import TitleCard from '../../../components/Cards/TitleCard';
+import moment from 'moment';
 
 ChartJS.register(
   CategoryScale,
@@ -45,8 +46,7 @@ function LineChart() {
   };
 
   const labels = stats.dailyStats.map(day => {
-    const date = new Date(day.date)
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+    return moment(day.date, 'YYYY-MM-DD').format('ddd, MMM D')
   })
 
   const data = {
@@ -77,7 +77,7 @@ function LineChart() {
   };
 
   return (
-    <TitleCard title={"Last 7 Days Activity"}>
+    <TitleCard title={"Selected Period Activity"}>
       <Line data={data} options={options} />
     </TitleCard>
   )

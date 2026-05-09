@@ -1,9 +1,14 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import { supabase } from '../../app/supabaseClient'
 
-export const getFailedCandidatesContent = createAsyncThunk('/failedCandidates/content', async (_, { getState }) => {
+export const getFailedCandidatesContent = createAsyncThunk('/failedCandidates/content', async (params, { getState }) => {
     const { auth } = getState()
     const user = auth.user
+    
+    const page = params?.page || 1
+    const limit = params?.limit || 10
+    const offset = (page - 1) * limit
+    const searchTerm = params?.searchTerm || ''
 
     // Build query based on role
     let query = supabase
@@ -11,8 +16,8 @@ export const getFailedCandidatesContent = createAsyncThunk('/failedCandidates/co
         .select(`
             *,
             profiles (*),
-            recruiters (name)
-        `)
+            recruiters (company)
+        `, { count: 'exact' })
         .eq('status', 'failed')
         .order('contacted_at', { ascending: false })
     
@@ -20,21 +25,31 @@ export const getFailedCandidatesContent = createAsyncThunk('/failedCandidates/co
     if (user?.role === 'owner') {
         query = query.eq('owner_id', user.id)
     }
+    
+    query = query.range(offset, offset + limit - 1)
 
-    const { data: contacts, error } = await query
+    const { data: contacts, error, count } = await query
     
     if (error) throw error
 
-    const candidates = contacts.map(contact => ({
+    let candidates = contacts.map(contact => ({
         ...contact.profiles,
         status: contact.status,
         lastContactDate: contact.contacted_at,
-        recruiterName: contact.recruiters?.name || 'Deleted Recruiter',
+        recruiterName: contact.recruiters?.company || 'Deleted Recruiter',
         notes: contact.notes || '',
         contactId: contact.id
     }))
+    
+    // Apply search filter
+    if (searchTerm) {
+        candidates = candidates.filter(c => 
+            c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            c.headline?.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+    }
 
-    return candidates
+    return { data: candidates, totalCount: count }
 })
 
 export const deleteFailedCandidateFromDb = createAsyncThunk('/failedCandidates/delete', async (id, { getState }) => {
@@ -67,7 +82,8 @@ export const failedCandidatesSlice = createSlice({
     name: 'failedCandidates',
     initialState: {
         isLoading: false,
-        candidates: []
+        candidates: [],
+        totalCount: 0
     },
     reducers: {},
     extraReducers: (builder) => {
@@ -76,7 +92,8 @@ export const failedCandidatesSlice = createSlice({
                 state.isLoading = true
             })
             .addCase(getFailedCandidatesContent.fulfilled, (state, action) => {
-                state.candidates = action.payload
+                state.candidates = action.payload.data
+                state.totalCount = action.payload.totalCount
                 state.isLoading = false
             })
             .addCase(getFailedCandidatesContent.rejected, (state) => {

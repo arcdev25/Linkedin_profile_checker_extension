@@ -1,14 +1,19 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import { supabase } from '../../app/supabaseClient'
 
-export const getAccountsContent = createAsyncThunk('/accounts/content', async (_, { getState }) => {
+export const getAccountsContent = createAsyncThunk('/accounts/content', async (params, { getState }) => {
     const { auth } = getState()
     const user = auth.user
+    
+    const page = params?.page || 1
+    const limit = params?.limit || 10
+    const offset = (page - 1) * limit
 
     let query = supabase
         .from('recruiters')
-        .select('*')
+        .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1)
     
     // If user is owner (not admin), filter by owner_id
     if (user?.role === 'owner') {
@@ -16,10 +21,10 @@ export const getAccountsContent = createAsyncThunk('/accounts/content', async (_
     }
     // Admin sees all recruiters
     
-    const { data, error } = await query
+    const { data, error, count } = await query
     
     if (error) throw error
-    return data
+    return { data, totalCount: count }
 })
 
 export const addAccountToDb = createAsyncThunk('/accounts/add', async (accountObj, { getState }) => {
@@ -122,7 +127,8 @@ export const accountsSlice = createSlice({
     name: 'accounts',
     initialState: {
         isLoading: false,
-        accounts: []
+        accounts: [],
+        totalCount: 0
     },
     reducers: {
         addNewAccount: (state, action) => {
@@ -150,7 +156,8 @@ export const accountsSlice = createSlice({
                 state.isLoading = true
             })
             .addCase(getAccountsContent.fulfilled, (state, action) => {
-                state.accounts = action.payload
+                state.accounts = action.payload.data
+                state.totalCount = action.payload.totalCount
                 state.isLoading = false
             })
             .addCase(getAccountsContent.rejected, (state) => {

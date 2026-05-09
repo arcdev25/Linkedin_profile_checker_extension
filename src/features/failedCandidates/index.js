@@ -7,14 +7,9 @@ import SearchBar from "../../components/Input/SearchBar"
 import TrashIcon from '@heroicons/react/24/outline/TrashIcon'
 import { openModal } from "../common/modalSlice"
 import { CONFIRMATION_MODAL_CLOSE_TYPES, MODAL_BODY_TYPES } from '../../utils/globalConstantUtil'
+import Pagination from "../../components/Pagination/Pagination"
 
-const TopSideButtons = ({applySearch}) => {
-    const [searchText, setSearchText] = useState("")
-
-    useEffect(() => {
-        applySearch(searchText)
-    }, [searchText])
-
+const TopSideButtons = ({searchText, setSearchText}) => {
     return(
         <div className="inline-block float-right">
             <SearchBar searchText={searchText} styleClass="mr-4" setSearchText={setSearchText}/>
@@ -23,25 +18,24 @@ const TopSideButtons = ({applySearch}) => {
 }
 
 function FailedCandidates(){
-    const { candidates, isLoading } = useSelector(state => state.failedCandidates)
+    const { candidates, totalCount, isLoading } = useSelector(state => state.failedCandidates)
     const dispatch = useDispatch()
-    const [filteredCandidates, setFilteredCandidates] = useState([])
+    const [currentPage, setCurrentPage] = useState(1)
+    const [searchText, setSearchText] = useState("")
+    const itemsPerPage = 10
 
     useEffect(() => {
-        dispatch(getFailedCandidatesContent())
-    }, [dispatch])
+        dispatch(getFailedCandidatesContent({ 
+            page: currentPage, 
+            limit: itemsPerPage,
+            searchTerm: searchText
+        }))
+    }, [dispatch, currentPage, searchText])
 
-    useEffect(() => {
-        setFilteredCandidates(candidates)
-    }, [candidates])
+    const totalPages = Math.ceil(totalCount / itemsPerPage)
 
-    const applySearch = (value) => {
-        let filtered = candidates.filter((c) => {
-            return c.name.toLowerCase().includes(value.toLowerCase()) || 
-                   c.email?.toLowerCase().includes(value.toLowerCase()) ||
-                   c.headline?.toLowerCase().includes(value.toLowerCase())
-        })
-        setFilteredCandidates(filtered)
+    const handlePageChange = (page) => {
+        setCurrentPage(page)
     }
 
     const deleteCurrentCandidate = (id) => {
@@ -63,7 +57,8 @@ function FailedCandidates(){
                 topMargin="mt-2" 
                 TopSideButtons={
                     <TopSideButtons 
-                        applySearch={applySearch}
+                        searchText={searchText}
+                        setSearchText={setSearchText}
                     />
                 }
             >
@@ -71,9 +66,10 @@ function FailedCandidates(){
                     <table className="table w-full">
                         <thead>
                         <tr>
+                            <th>#</th>
                             <th>Name</th>
                             <th>Headline</th>
-                            <th>Recruiter</th>
+                            <th>Company</th>
                             <th>Last Contact</th>
                             <th>Notes</th>
                             <th></th>
@@ -82,16 +78,18 @@ function FailedCandidates(){
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan="6" className="text-center">Loading...</td>
+                                    <td colSpan="7" className="text-center">Loading...</td>
                                 </tr>
-                            ) : filteredCandidates.length === 0 ? (
+                            ) : candidates.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" className="text-center">No failed candidates found</td>
+                                    <td colSpan="7" className="text-center">No failed candidates found</td>
                                 </tr>
                             ) : (
-                                filteredCandidates.map((candidate) => {
+                                candidates.map((candidate, index) => {
+                                    const rowNumber = (currentPage - 1) * itemsPerPage + index + 1
                                     return(
                                         <tr key={candidate.id}>
+                                        <td>{rowNumber}</td>
                                         <td>
                                             <div className="flex items-center space-x-3">
                                                 <div className="avatar">
@@ -129,6 +127,17 @@ function FailedCandidates(){
                         </tbody>
                     </table>
                 </div>
+                
+                {/* Pagination */}
+                {!isLoading && totalCount > 0 && (
+                    <Pagination 
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={handlePageChange}
+                        totalItems={totalCount}
+                        itemsPerPage={itemsPerPage}
+                    />
+                )}
             </TitleCard>
         </>
     )

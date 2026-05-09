@@ -10,6 +10,7 @@ import {
 import { Bar } from 'react-chartjs-2';
 import { useSelector } from 'react-redux';
 import TitleCard from '../../../components/Cards/TitleCard';
+import moment from 'moment';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -31,8 +32,7 @@ function BarChart(){
       };
       
       const labels = stats.dailyStats.map(day => {
-        const date = new Date(day.date)
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        return moment(day.date, 'YYYY-MM-DD').format('MMM D')
       })
       
       const data = {

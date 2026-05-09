@@ -1,10 +1,14 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import { supabase } from '../../app/supabaseClient'
 
-// Get candidates that need reconnection (recruiter was deleted)
-export const getNeedReconnectionCandidates = createAsyncThunk('/candidates/needReconnection', async (_, { getState }) => {
+export const getNeedReconnectionCandidates = createAsyncThunk('/candidates/needReconnection', async (params, { getState }) => {
     const { auth } = getState()
     const user = auth.user
+    
+    const page = params?.page || 1
+    const limit = params?.limit || 10
+    const offset = (page - 1) * limit
+    const searchTerm = params?.searchTerm || ''
 
     // Build query based on role
     let query = supabase
@@ -12,7 +16,7 @@ export const getNeedReconnectionCandidates = createAsyncThunk('/candidates/needR
         .select(`
             *,
             profiles (*)
-        `)
+        `, { count: 'exact' })
         .eq('status', 'need reconnection')
         .order('contacted_at', { ascending: false })
     
@@ -20,12 +24,14 @@ export const getNeedReconnectionCandidates = createAsyncThunk('/candidates/needR
     if (user?.role === 'owner') {
         query = query.eq('owner_id', user.id)
     }
+    
+    query = query.range(offset, offset + limit - 1)
 
-    const { data: contacts, error } = await query
+    const { data: contacts, error, count } = await query
     
     if (error) throw error
 
-    const candidates = contacts.map(contact => ({
+    let candidates = contacts.map(contact => ({
         ...contact.profiles,
         status: contact.status,
         lastContactDate: contact.contacted_at,
@@ -35,33 +41,62 @@ export const getNeedReconnectionCandidates = createAsyncThunk('/candidates/needR
         recruiterId: contact.recruiter_id,
         ownerId: contact.owner_id
     }))
+    
+    // Apply search filter
+    if (searchTerm) {
+        candidates = candidates.filter(c => 
+            c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            c.headline?.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+    }
 
-    return candidates
+    return { data: candidates, totalCount: count }
 })
 
-export const getCandidatesContent = createAsyncThunk('/candidates/content', async (_, { getState }) => {
+export const getCandidatesContent = createAsyncThunk('/candidates/content', async (params, { getState }) => {
     const { auth } = getState()
     const user = auth.user
+    
+    const page = params?.page || 1
+    const limit = params?.limit || 10
+    const offset = (page - 1) * limit
+    const searchTerm = params?.searchTerm || ''
+    const statusFilter = params?.statusFilter || ''
 
     if (user?.role === 'admin') {
         // Admin sees all profiles with their contact information (excluding failed)
-        const { data: profiles, error: profilesError } = await supabase
+        let query = supabase
             .from('profiles')
             .select(`
                 *,
-                contacts (
+                contacts!inner (
                     id,
                     status,
                     notes,
                     contacted_at,
                     recruiter_id,
                     recruiters (
-                        name,
+                        company,
                         owner_id
                     )
                 )
-            `)
+            `, { count: 'exact' })
+            .neq('contacts.status', 'failed')
             .order('created_at', { ascending: false })
+        
+        // Apply search filter
+        if (searchTerm) {
+            query = query.or(`name.ilike.%${searchTerm}%,headline.ilike.%${searchTerm}%`)
+        }
+        
+        // Apply status filter
+        if (statusFilter) {
+            query = query.eq('contacts.status', statusFilter)
+        }
+        
+        query = query.range(offset, offset + limit - 1)
+        
+        const { data: profiles, error: profilesError, count } = await query
         
         if (profilesError) throw profilesError
 
@@ -74,16 +109,15 @@ export const getCandidatesContent = createAsyncThunk('/candidates/content', asyn
                 ...profile,
                 status: latestContact?.status || 'not contacted',
                 lastContactDate: latestContact?.contacted_at || profile.created_at,
-                recruiterName: latestContact?.recruiters?.name || 'Unassigned',
+                recruiterName: latestContact?.recruiters?.company || 'Unassigned',
                 notes: latestContact?.notes || '',
                 contactId: latestContact?.id || null
             }
-        }).filter(c => c.status !== 'failed') // Exclude failed candidates
+        })
 
-        return candidates
+        return { data: candidates, totalCount: count }
     } else {
         // Owner sees only profiles contacted by their recruiters (excluding failed)
-        // First, get all recruiter IDs for this owner
         const { data: recruiters, error: recruitersError } = await supabase
             .from('recruiters')
             .select('id')
@@ -94,49 +128,52 @@ export const getCandidatesContent = createAsyncThunk('/candidates/content', asyn
         const recruiterIds = recruiters.map(r => r.id)
 
         if (recruiterIds.length === 0) {
-            // No recruiters, no candidates
-            return []
+            return { data: [], totalCount: 0 }
         }
 
-        // Get all contacts made by these recruiters (excluding failed)
-        const { data: contacts, error: contactsError } = await supabase
+        let query = supabase
             .from('contacts')
             .select(`
                 *,
                 profiles (*),
-                recruiters (name)
-            `)
+                recruiters (company)
+            `, { count: 'exact' })
             .in('recruiter_id', recruiterIds)
             .neq('status', 'failed')
             .order('contacted_at', { ascending: false })
         
+        // Apply status filter
+        if (statusFilter) {
+            query = query.eq('status', statusFilter)
+        }
+        
+        query = query.range(offset, offset + limit - 1)
+        
+        const { data: contacts, error: contactsError, count } = await query
+        
         if (contactsError) throw contactsError
 
-        // Group contacts by profile_id and get the latest contact for each profile
-        const profileMap = new Map()
-        
-        contacts.forEach(contact => {
-            const profileId = contact.profile_id
-            if (!profileMap.has(profileId) || 
-                new Date(contact.contacted_at) > new Date(profileMap.get(profileId).contacted_at)) {
-                profileMap.set(profileId, contact)
-            }
-        })
-
-        // Transform to candidates format
-        const candidates = Array.from(profileMap.values()).map(contact => {
+        let candidates = contacts.map(contact => {
             const profile = contact.profiles
             return {
                 ...profile,
                 status: contact.status,
                 lastContactDate: contact.contacted_at,
-                recruiterName: contact.recruiters?.name || 'Unknown',
+                recruiterName: contact.recruiters?.company || 'Unknown',
                 notes: contact.notes || '',
                 contactId: contact.id
             }
         })
+        
+        // Apply search filter on client side for owner (since we can't do it in the query easily)
+        if (searchTerm) {
+            candidates = candidates.filter(c => 
+                c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                c.headline?.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+        }
 
-        return candidates
+        return { data: candidates, totalCount: count }
     }
 })
 
@@ -206,7 +243,9 @@ export const candidatesSlice = createSlice({
     initialState: {
         isLoading: false,
         candidates: [],
-        needReconnection: []
+        needReconnection: [],
+        totalCount: 0,
+        needReconnectionTotalCount: 0
     },
     reducers: {
         addNewCandidate: (state, action) => {
@@ -227,14 +266,16 @@ export const candidatesSlice = createSlice({
                 state.isLoading = true
             })
             .addCase(getCandidatesContent.fulfilled, (state, action) => {
-                state.candidates = action.payload
+                state.candidates = action.payload.data
+                state.totalCount = action.payload.totalCount
                 state.isLoading = false
             })
             .addCase(getCandidatesContent.rejected, (state) => {
                 state.isLoading = false
             })
             .addCase(getNeedReconnectionCandidates.fulfilled, (state, action) => {
-                state.needReconnection = action.payload
+                state.needReconnection = action.payload.data
+                state.needReconnectionTotalCount = action.payload.totalCount
             })
             .addCase(addCandidateToDb.fulfilled, (state, action) => {
                 state.candidates = [action.payload, ...state.candidates]

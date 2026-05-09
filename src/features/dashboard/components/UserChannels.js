@@ -28,7 +28,7 @@ function UserChannels(){
                                 return(
                                     <tr key={recruiter.id}>
                                         <th>{k+1}</th>
-                                        <td>{recruiter.name}</td>
+                                        <td>{recruiter.company || 'N/A'}</td>
                                         <td>{recruiter.totalContacts}</td>
                                         <td>{recruiter.successCount}</td>
                                         <td>{`${recruiter.conversionRate}%`}</td>

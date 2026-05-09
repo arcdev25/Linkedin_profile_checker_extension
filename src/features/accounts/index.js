@@ -1,5 +1,5 @@
 import moment from "moment"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import TitleCard from "../../components/Cards/TitleCard"
 import { openModal } from "../common/modalSlice"
@@ -7,6 +7,7 @@ import { getAccountsContent } from "./accountSlice"
 import { CONFIRMATION_MODAL_CLOSE_TYPES, MODAL_BODY_TYPES } from '../../utils/globalConstantUtil'
 import TrashIcon from '@heroicons/react/24/outline/TrashIcon'
 import PencilIcon from '@heroicons/react/24/outline/PencilIcon'
+import Pagination from "../../components/Pagination/Pagination"
 
 const TopSideButtons = () => {
     const dispatch = useDispatch()
@@ -23,12 +24,20 @@ const TopSideButtons = () => {
 }
 
 function Accounts(){
-    const { accounts, isLoading } = useSelector(state => state.account)
+    const { accounts, totalCount, isLoading } = useSelector(state => state.account)
     const dispatch = useDispatch()
+    const [currentPage, setCurrentPage] = useState(1)
+    const itemsPerPage = 10
 
     useEffect(() => {
-        dispatch(getAccountsContent())
-    }, [dispatch])
+        dispatch(getAccountsContent({ page: currentPage, limit: itemsPerPage }))
+    }, [dispatch, currentPage])
+
+    const totalPages = Math.ceil(totalCount / itemsPerPage)
+
+    const handlePageChange = (page) => {
+        setCurrentPage(page)
+    }
 
     const deleteCurrentAccount = (id) => {
         dispatch(openModal({
@@ -57,6 +66,7 @@ function Accounts(){
                     <table className="table w-full">
                         <thead>
                         <tr>
+                            <th>#</th>
                             <th>Name</th>
                             <th>Email</th>
                             <th>Company</th>
@@ -67,16 +77,18 @@ function Accounts(){
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan="5" className="text-center">Loading...</td>
+                                    <td colSpan="6" className="text-center">Loading...</td>
                                 </tr>
                             ) : accounts.length === 0 ? (
                                 <tr>
-                                    <td colSpan="5" className="text-center">No recruiters found</td>
+                                    <td colSpan="6" className="text-center">No recruiters found</td>
                                 </tr>
                             ) : (
-                                accounts.map((account) => {
+                                accounts.map((account, index) => {
+                                    const rowNumber = (currentPage - 1) * itemsPerPage + index + 1
                                     return(
                                         <tr key={account.id}>
+                                        <td>{rowNumber}</td>
                                         <td>
                                             <div className="font-bold">{account.name}</div>
                                         </td>
@@ -100,6 +112,17 @@ function Accounts(){
                         </tbody>
                     </table>
                 </div>
+                
+                {/* Pagination */}
+                {!isLoading && totalCount > 0 && (
+                    <Pagination 
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={handlePageChange}
+                        totalItems={totalCount}
+                        itemsPerPage={itemsPerPage}
+                    />
+                )}
             </TitleCard>
         </>
     )
