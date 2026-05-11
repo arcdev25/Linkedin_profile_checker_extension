@@ -33,6 +33,7 @@ export const getNeedReconnectionCandidates = createAsyncThunk('/candidates/needR
 
     let candidates = contacts.map(contact => ({
         ...contact.profiles,
+        country: contact.profiles?.country,
         status: contact.status,
         lastContactDate: contact.contacted_at,
         recruiterName: 'Deleted Recruiter',
@@ -107,6 +108,7 @@ export const getCandidatesContent = createAsyncThunk('/candidates/content', asyn
 
             return {
                 ...profile,
+                country: profile.country,
                 status: latestContact?.status || 'not contacted',
                 lastContactDate: latestContact?.contacted_at || profile.created_at,
                 recruiterName: latestContact?.recruiters?.company || 'Unassigned',
@@ -157,6 +159,7 @@ export const getCandidatesContent = createAsyncThunk('/candidates/content', asyn
             const profile = contact.profiles
             return {
                 ...profile,
+                country: profile.country,
                 status: contact.status,
                 lastContactDate: contact.contacted_at,
                 recruiterName: contact.recruiters?.company || 'Unknown',

@@ -190,7 +190,7 @@ function Candidates(){
                         <tr>
                             <th>#</th>
                             <th>Name</th>
-                            <th>Headline</th>
+                            <th>Country</th>
                             <th>Status</th>
                             <th>Company</th>
                             <th>Last Contact</th>
@@ -221,6 +221,14 @@ function Candidates(){
                                                 </div>
                                                 <div>
                                                     <div className="font-bold">{candidate.name}</div>
+                                                    <div className="text-sm opacity-50 max-w-xs truncate">
+                                                        {candidate.headline || 'N/A'}
+                                                    </div>
+                                                    {candidate.notes && (
+                                                        <div className="text-xs text-gray-500 italic max-w-xs truncate" title={candidate.notes}>
+                                                            Note: {candidate.notes}
+                                                        </div>
+                                                    )}
                                                     <div className="text-sm opacity-50">
                                                         <a href={candidate.profile_url} target="_blank" rel="noopener noreferrer" className="link link-primary">
                                                             LinkedIn
@@ -229,9 +237,7 @@ function Candidates(){
                                                 </div>
                                             </div>
                                         </td>
-                                        <td>
-                                            <div className="max-w-xs truncate">{candidate.headline || 'N/A'}</div>
-                                        </td>
+                                        <td>{candidate.country || 'N/A'}</td>
                                         <td>{getStatusBadge(candidate.status)}</td>
                                         <td>{candidate.recruiterName}</td>
                                         <td>{moment(candidate.lastContactDate).format("DD MMM YY")}</td>

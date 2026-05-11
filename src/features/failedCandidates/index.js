@@ -68,21 +68,20 @@ function FailedCandidates(){
                         <tr>
                             <th>#</th>
                             <th>Name</th>
-                            <th>Headline</th>
+                            <th>Country</th>
                             <th>Company</th>
                             <th>Last Contact</th>
-                            <th>Notes</th>
                             <th></th>
                         </tr>
                         </thead>
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan="7" className="text-center">Loading...</td>
+                                    <td colSpan="6" className="text-center">Loading...</td>
                                 </tr>
                             ) : candidates.length === 0 ? (
                                 <tr>
-                                    <td colSpan="7" className="text-center">No failed candidates found</td>
+                                    <td colSpan="6" className="text-center">No failed candidates found</td>
                                 </tr>
                             ) : (
                                 candidates.map((candidate, index) => {
@@ -99,6 +98,14 @@ function FailedCandidates(){
                                                 </div>
                                                 <div>
                                                     <div className="font-bold">{candidate.name}</div>
+                                                    <div className="text-sm opacity-50 max-w-xs truncate">
+                                                        {candidate.headline || 'N/A'}
+                                                    </div>
+                                                    {candidate.notes && (
+                                                        <div className="text-xs text-gray-500 italic max-w-xs truncate" title={candidate.notes}>
+                                                            Note: {candidate.notes}
+                                                        </div>
+                                                    )}
                                                     <div className="text-sm opacity-50">
                                                         <a href={candidate.profile_url} target="_blank" rel="noopener noreferrer" className="link link-primary">
                                                             LinkedIn
@@ -107,14 +114,9 @@ function FailedCandidates(){
                                                 </div>
                                             </div>
                                         </td>
-                                        <td>
-                                            <div className="max-w-xs truncate">{candidate.headline || 'N/A'}</div>
-                                        </td>
+                                        <td>{candidate.country || 'N/A'}</td>
                                         <td>{candidate.recruiterName}</td>
                                         <td>{moment(candidate.lastContactDate).format("DD MMM YY")}</td>
-                                        <td>
-                                            <div className="max-w-xs truncate">{candidate.notes || 'N/A'}</div>
-                                        </td>
                                         <td>
                                             <button className="btn btn-square btn-ghost" onClick={() => deleteCurrentCandidate(candidate.id)}>
                                                 <TrashIcon className="w-5"/>

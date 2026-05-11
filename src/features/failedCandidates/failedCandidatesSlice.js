@@ -34,6 +34,7 @@ export const getFailedCandidatesContent = createAsyncThunk('/failedCandidates/co
 
     let candidates = contacts.map(contact => ({
         ...contact.profiles,
+        country: contact.profiles?.country,
         status: contact.status,
         lastContactDate: contact.contacted_at,
         recruiterName: contact.recruiters?.company || 'Deleted Recruiter',

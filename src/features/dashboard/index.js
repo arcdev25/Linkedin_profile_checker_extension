@@ -71,6 +71,12 @@ function Dashboard(){
             description: "Awaiting response"
         },
         {
+            title: "Accept", 
+            value: (stats.statusCounts.accept || 0).toString(), 
+            icon: <CircleStackIcon className='w-8 h-8'/>, 
+            description: "Awaiting response"
+        },
+        {
             title: "Chatting", 
             value: (stats.statusCounts.chatting || 0).toString(), 
             icon: <ChatBubbleBottomCenterIcon className='w-8 h-8'/>, 
@@ -92,7 +98,7 @@ function Dashboard(){
             title: "Success", 
             value: (stats.statusCounts.success || 0).toString(), 
             icon: <CheckCircleIcon className='w-8 h-8'/>, 
-            description: "↗︎ Successful conversions"
+            description: "Successful conversion"
         },
     ]
 
@@ -133,7 +139,7 @@ function Dashboard(){
             <DashboardTopBar dateRange={dateRange} updateDashboardPeriod={updateDashboardPeriod}/>
         
         {/** ---------------------- Different stats content 1 ------------------------- */}
-            <div className="grid lg:grid-cols-6 mt-2 md:grid-cols-2 grid-cols-1 gap-6">
+            <div className="grid lg:grid-cols-7 mt-2 md:grid-cols-2 grid-cols-1 gap-6">
                 {
                     statsData.map((d, k) => {
                         return (
