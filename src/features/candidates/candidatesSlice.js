@@ -25,13 +25,12 @@ export const getNeedReconnectionCandidates = createAsyncThunk('/candidates/needR
         query = query.eq('owner_id', user.id)
     }
     
-    query = query.range(offset, offset + limit - 1)
-
-    const { data: contacts, error, count } = await query
+    // For search, we need to get all data first to filter by profile fields
+    const { data: allContacts, error, count: totalCount } = await query
     
     if (error) throw error
 
-    let candidates = contacts.map(contact => ({
+    let candidates = allContacts.map(contact => ({
         ...contact.profiles,
         country: contact.profiles?.country,
         status: contact.status,
@@ -47,11 +46,18 @@ export const getNeedReconnectionCandidates = createAsyncThunk('/candidates/needR
     if (searchTerm) {
         candidates = candidates.filter(c => 
             c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            c.headline?.toLowerCase().includes(searchTerm.toLowerCase())
+            c.headline?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            c.country?.toLowerCase().includes(searchTerm.toLowerCase())
         )
     }
+    
+    // Get total count after filtering
+    const filteredCount = candidates.length
+    
+    // Apply pagination after filtering
+    const paginatedCandidates = candidates.slice(offset, offset + limit)
 
-    return { data: candidates, totalCount: count }
+    return { data: paginatedCandidates, totalCount: filteredCount }
 })
 
 export const getCandidatesContent = createAsyncThunk('/candidates/content', async (params, { getState }) => {
@@ -85,9 +91,9 @@ export const getCandidatesContent = createAsyncThunk('/candidates/content', asyn
             .neq('contacts.status', 'failed')
             .order('created_at', { ascending: false })
         
-        // Apply search filter
+        // Apply search filter on server side
         if (searchTerm) {
-            query = query.or(`name.ilike.%${searchTerm}%,headline.ilike.%${searchTerm}%`)
+            query = query.or(`name.ilike.%${searchTerm}%,headline.ilike.%${searchTerm}%,country.ilike.%${searchTerm}%`)
         }
         
         // Apply status filter
@@ -149,13 +155,12 @@ export const getCandidatesContent = createAsyncThunk('/candidates/content', asyn
             query = query.eq('status', statusFilter)
         }
         
-        query = query.range(offset, offset + limit - 1)
-        
-        const { data: contacts, error: contactsError, count } = await query
+        // For owner, we need to get all data first to filter by profile fields
+        const { data: allContacts, error: contactsError, count: totalCount } = await query
         
         if (contactsError) throw contactsError
 
-        let candidates = contacts.map(contact => {
+        let candidates = allContacts.map(contact => {
             const profile = contact.profiles
             return {
                 ...profile,
@@ -168,15 +173,22 @@ export const getCandidatesContent = createAsyncThunk('/candidates/content', asyn
             }
         })
         
-        // Apply search filter on client side for owner (since we can't do it in the query easily)
+        // Apply search filter on client side for owner (since we need to search profile fields)
         if (searchTerm) {
             candidates = candidates.filter(c => 
                 c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                c.headline?.toLowerCase().includes(searchTerm.toLowerCase())
+                c.headline?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                c.country?.toLowerCase().includes(searchTerm.toLowerCase())
             )
         }
+        
+        // Get total count after filtering
+        const filteredCount = candidates.length
+        
+        // Apply pagination after filtering
+        const paginatedCandidates = candidates.slice(offset, offset + limit)
 
-        return { data: candidates, totalCount: count }
+        return { data: paginatedCandidates, totalCount: filteredCount }
     }
 })
 
