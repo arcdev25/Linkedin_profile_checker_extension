@@ -7,7 +7,16 @@ export const getAccountsContent = createAsyncThunk('/accounts/content', async (p
     
     const page = params?.page || 1
     const limit = params?.limit || 10
+    const ownerId = params?.ownerId
     const offset = (page - 1) * limit
+    const isAdmin = user?.role === 'admin'
+    // Determine which owner's data to fetch. Admins can pass null for all owners.
+    let targetOwnerId = isAdmin ? ownerId : user?.id
+     // If user is owner (not admin), always use their own ID
+    if (user?.role === 'owner') {
+        targetOwnerId = user.id
+    }
+
 
     let query = supabase
         .from('recruiters')
@@ -15,6 +24,9 @@ export const getAccountsContent = createAsyncThunk('/accounts/content', async (p
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1)
     
+    if (targetOwnerId) {
+        query = query.eq('owner_id', targetOwnerId)
+    }    
     // If user is owner (not admin), filter by owner_id
     if (user?.role === 'owner') {
         query = query.eq('owner_id', user.id)
@@ -25,6 +37,18 @@ export const getAccountsContent = createAsyncThunk('/accounts/content', async (p
     
     if (error) throw error
     return { data, totalCount: count }
+})
+
+// Get all owners for admin tabs
+export const getAllOwners = createAsyncThunk('/account/owners', async () => {
+    const { data, error } = await supabase
+        .from('owners')
+        .select('id, name, email, role')
+        .eq('role', 'owner')
+        .order('name', { ascending: true })
+    
+    if (error) throw error
+    return data || []
 })
 
 export const addAccountToDb = createAsyncThunk('/accounts/add', async (accountObj, { getState }) => {
@@ -128,6 +152,7 @@ export const accountsSlice = createSlice({
     initialState: {
         isLoading: false,
         accounts: [],
+        owners: [],
         totalCount: 0
     },
     reducers: {
@@ -147,6 +172,9 @@ export const accountsSlice = createSlice({
             if (index !== -1) {
                 state.accounts[index] = { ...state.accounts[index], ...updates }
             }
+        },
+        setSelectedOwner: (state, action) => {
+            state.selectedOwnerId = action.payload
         }
     },
 
@@ -175,9 +203,12 @@ export const accountsSlice = createSlice({
             .addCase(deleteAccountFromDb.fulfilled, (state, action) => {
                 state.accounts = state.accounts.filter(account => account.id !== action.payload)
             })
+            .addCase(getAllOwners.fulfilled, (state, action) => {
+                            state.owners = action.payload
+                        })
     }
 })
 
-export const { addNewAccount, deleteAccount, updateAccount } = accountsSlice.actions
+export const { addNewAccount, deleteAccount, updateAccount, setSelectedOwner } = accountsSlice.actions
 
 export default accountsSlice.reducer

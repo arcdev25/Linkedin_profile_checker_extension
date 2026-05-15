@@ -8,6 +8,7 @@ import { CONFIRMATION_MODAL_CLOSE_TYPES, MODAL_BODY_TYPES } from '../../utils/gl
 import TrashIcon from '@heroicons/react/24/outline/TrashIcon'
 import PencilIcon from '@heroicons/react/24/outline/PencilIcon'
 import Pagination from "../../components/Pagination/Pagination"
+import { setSelectedOwner, getAllOwners } from "./accountSlice"
 
 const TopSideButtons = () => {
     const dispatch = useDispatch()
@@ -24,15 +25,24 @@ const TopSideButtons = () => {
 }
 
 function Accounts(){
-    const { accounts, totalCount, isLoading } = useSelector(state => state.account)
+    const { user } = useSelector(state => state.auth)
+    const { accounts, totalCount, isLoading, owners, selectedOwnerId } = useSelector(state => state.account)
+    const isAdmin = user?.role === 'admin'
     const dispatch = useDispatch()
     const [currentPage, setCurrentPage] = useState(1)
     const itemsPerPage = 10
-
     useEffect(() => {
-        dispatch(getAccountsContent({ page: currentPage, limit: itemsPerPage }))
-    }, [dispatch, currentPage])
-
+             // Load owners list if admin
+             if (isAdmin) {
+                 dispatch(getAllOwners())
+             }
+         }, [dispatch, isAdmin])
+    useEffect(() => {
+        dispatch(getAccountsContent({ page: currentPage, limit: itemsPerPage, ownerId: selectedOwnerId}))
+    }, [dispatch, selectedOwnerId, currentPage])
+    const handleOwnerTabClick = (ownerId) => {
+            dispatch(setSelectedOwner(ownerId))
+        }
     const totalPages = Math.ceil(totalCount / itemsPerPage)
 
     const handlePageChange = (page) => {
@@ -58,10 +68,32 @@ function Accounts(){
             extraObject : account
         }))
     }
-
+   
     return(
         <>
-            <TitleCard title="Recruiters" topMargin="mt-2" TopSideButtons={<TopSideButtons />}>
+            {/** ---------------------- Owner Tabs for Admin ------------------------- */}
+            {isAdmin && owners.length > 0 && (
+                <div className="mb-4">
+                    <div className="tabs tabs-boxed bg-base-200">
+                        <button 
+                            className={`tab ${selectedOwnerId === null ? 'tab-active' : ''}`}
+                            onClick={() => handleOwnerTabClick(null)}
+                        >
+                            All Owners
+                        </button>
+                        {owners.map(owner => (
+                            <button 
+                                key={owner.id}
+                                className={`tab ${selectedOwnerId === owner.id ? 'tab-active' : ''}`}
+                                onClick={() => handleOwnerTabClick(owner.id)}
+                            >
+                                {owner.name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+            <TitleCard title="Recruiters" totalCount={totalCount} topMargin="mt-2" TopSideButtons={<TopSideButtons />}>
                 <div className="overflow-x-auto w-full">
                     <table className="table w-full">
                         <thead>
