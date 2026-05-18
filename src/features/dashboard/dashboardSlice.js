@@ -75,38 +75,64 @@ export const getDashboardStats = createAsyncThunk('/dashboard/stats', async (par
     const recruiters = recruitersResult.data
     const recruiterIds = recruiters.map(recruiter => recruiter.id)
 
-    let contactsQuery = supabase
-        .from('contacts')
-        .select('*, profiles(*), recruiters(name, company)')
-    
-    // Filter by owner_id when available, and fall back to recruiter ownership for older rows.
-    if (targetOwnerId) {
-        const ownerFilter = [`owner_id.eq.${targetOwnerId}`]
-
-        if (recruiterIds.length > 0) {
-            ownerFilter.push(`recruiter_id.in.(${recruiterIds.join(',')})`)
+    // Helper to apply owner filter to a query
+    const applyOwnerFilter = (query) => {
+        if (targetOwnerId) {
+            const ownerFilter = [`owner_id.eq.${targetOwnerId}`]
+            if (recruiterIds.length > 0) {
+                ownerFilter.push(`recruiter_id.in.(${recruiterIds.join(',')})`)
+            }
+            return query.or(ownerFilter.join(','))
         }
-
-        contactsQuery = contactsQuery.or(ownerFilter.join(','))
+        return query
     }
 
-    // Filter by the selected UTC+3 calendar range.
+    // Query 1: Total Profiles + Pending — filtered by contacted_at (created date)
+    let createdQuery = supabase
+        .from('contacts')
+        .select('*, profiles(*), recruiters(name, company)')
+
+    createdQuery = applyOwnerFilter(createdQuery)
+
     if (startDate && endDate) {
-        contactsQuery = contactsQuery
+        createdQuery = createdQuery
             .gte('contacted_at', getTimezoneStartIso(startDate))
             .lte('contacted_at', getTimezoneEndIso(endDate))
     }
 
-    const contactsResult = await contactsQuery
-    if (contactsResult.error) throw contactsResult.error
+    const createdResult = await createdQuery
+    if (createdResult.error) throw createdResult.error
+    const createdContacts = createdResult.data
 
-    const contacts = contactsResult.data
+    // Query 2: Accept, Chatting, Not Interested, Failed, Success — filtered by updated_at
+    let updatedQuery = supabase
+        .from('contacts')
+        .select('*, profiles(*), recruiters(name, company)')
+        .not('status', 'eq', 'pending')
 
-    // Calculate stats by status
-    const statusCounts = contacts.reduce((acc, contact) => {
-        acc[contact.status] = (acc[contact.status] || 0) + 1
-        return acc
-    }, {})
+    updatedQuery = applyOwnerFilter(updatedQuery)
+
+    if (startDate && endDate) {
+        updatedQuery = updatedQuery
+            .gte('updated_at', getTimezoneStartIso(startDate))
+            .lte('updated_at', getTimezoneEndIso(endDate))
+    }
+
+    const updatedResult = await updatedQuery
+    if (updatedResult.error) throw updatedResult.error
+    const updatedContacts = updatedResult.data
+
+    // Status counts: pending from createdContacts, rest from updatedContacts
+    const statusCounts = {
+        pending: createdContacts.filter(c => c.status === 'pending').length,
+        ...updatedContacts.reduce((acc, contact) => {
+            acc[contact.status] = (acc[contact.status] || 0) + 1
+            return acc
+        }, {})
+    }
+
+    // Use createdContacts as the base for total profiles and recruiter stats
+    const contacts = createdContacts
 
     // Calculate recruiter performance
     const recruiterStats = recruiters.map(recruiter => {
@@ -130,13 +156,16 @@ export const getDashboardStats = createAsyncThunk('/dashboard/stats', async (par
     const selectedDays = getDateRangeDays(dateRange)
 
     const dailyStats = selectedDays.map(date => {
-        const dayContacts = contacts.filter(c => moment(c.contacted_at).utcOffset(DASHBOARD_TIMEZONE_OFFSET).format('YYYY-MM-DD') === date)
+        // Total and pending grouped by contacted_at (created date)
+        const dayCreated = createdContacts.filter(c => moment(c.contacted_at).utcOffset(DASHBOARD_TIMEZONE_OFFSET).format('YYYY-MM-DD') === date)
+        // Success and chatting grouped by updated_at
+        const dayUpdated = updatedContacts.filter(c => moment(c.updated_at).utcOffset(DASHBOARD_TIMEZONE_OFFSET).format('YYYY-MM-DD') === date)
         return {
             date,
-            total: dayContacts.length,
-            success: dayContacts.filter(c => c.status === 'success').length,
-            pending: dayContacts.filter(c => c.status === 'pending').length,
-            chatting: dayContacts.filter(c => c.status === 'chatting').length
+            total: dayCreated.length,
+            success: dayUpdated.filter(c => c.status === 'success').length,
+            pending: dayCreated.filter(c => c.status === 'pending').length,
+            chatting: dayUpdated.filter(c => c.status === 'chatting').length
         }
     })
 
