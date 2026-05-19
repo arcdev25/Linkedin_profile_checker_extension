@@ -4,6 +4,7 @@ import UsersIcon from '@heroicons/react/24/outline/UsersIcon'
 import ShieldCheckIcon from '@heroicons/react/24/outline/ShieldCheckIcon'
 import UserGroupIcon from '@heroicons/react/24/outline/UserGroupIcon'
 import XCircleIcon from '@heroicons/react/24/outline/XCircleIcon'
+import { ClipboardDocumentListIcon } from '@heroicons/react/24/outline'
 
 const iconClasses = `h-6 w-6`
 const submenuIconClasses = `h-5 w-5`
@@ -35,6 +36,11 @@ const routes = [
     icon: <ShieldCheckIcon className={iconClasses}/>,
     name: 'Owners',
     adminOnly: true, // Only show for admin users
+  },
+  {
+    path: '/app/daily-report',
+    icon: <ClipboardDocumentListIcon className={iconClasses} />,
+    name: 'Daily Report',
   },
 ]
 

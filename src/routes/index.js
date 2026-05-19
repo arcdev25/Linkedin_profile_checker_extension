@@ -13,7 +13,7 @@ const Bills = lazy(() => import('../pages/protected/Bills'))
 const ProfileSettings = lazy(() => import('../pages/protected/ProfileSettings'))
 const Accounts = lazy(() => import('../pages/protected/Accounts'))
 const Owners = lazy(() => import('../pages/protected/Owners'))
-
+const DailyReport = lazy(() => import('../pages/protected/DailyReport'))
 
 const routes = [
   {
@@ -59,6 +59,10 @@ const routes = [
   {
     path: '/blank',
     component: Blank,
+  },
+  {
+    path: '/daily-report',
+    component: DailyReport,
   },
 ]
 
