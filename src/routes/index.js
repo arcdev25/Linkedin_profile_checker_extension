@@ -14,6 +14,7 @@ const ProfileSettings = lazy(() => import('../pages/protected/ProfileSettings'))
 const Accounts = lazy(() => import('../pages/protected/Accounts'))
 const Owners = lazy(() => import('../pages/protected/Owners'))
 const DailyReport = lazy(() => import('../pages/protected/DailyReport'))
+const Rank = lazy(() => import('../pages/protected/Rank'))
 
 const routes = [
   {
@@ -64,6 +65,10 @@ const routes = [
     path: '/daily-report',
     component: DailyReport,
   },
+  {
+    path: '/rank',
+    component: Rank
+}
 ]
 
 export default routes
