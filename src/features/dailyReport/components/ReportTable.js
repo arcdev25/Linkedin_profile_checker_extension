@@ -1,4 +1,11 @@
-function ReportTable({ reports, handleChange, isAdmin }) {
+function ReportTable({
+    reports,
+    handleChange,
+    isAdmin,
+    currentUser,
+    readonly = false,
+    showUserColumns = false
+}) {
 
     return (
         <div className="overflow-x-auto bg-base-100 rounded-lg shadow">
@@ -7,8 +14,8 @@ function ReportTable({ reports, handleChange, isAdmin }) {
 
                 <thead className="sticky top-0 z-10 bg-base-100">
                     <tr>
-                        {isAdmin && <th>No</th>}
-                        {isAdmin && <th>User</th>}
+                        {showUserColumns && <th>No</th>}
+                        {showUserColumns && <th>User</th>}
                         <th>Connect</th>
                         <th>Accept</th>
                         <th>Publish</th>
@@ -25,12 +32,15 @@ function ReportTable({ reports, handleChange, isAdmin }) {
 
                 <tbody>
 
-                    {reports.map((report, index) => (
+                    {reports.map((report, index) => {
+                        const canEdit = !readonly && (isAdmin || report.userId === currentUser.id)
+                        return (
+                        
                         <tr key={index}>
 
-                            {isAdmin && <td>{report.no}</td>}
+                            {showUserColumns && <td>{report.no}</td>}
 
-                            {isAdmin && (
+                            {showUserColumns && (
                                 <td>
                                     <input
                                         className="input input-sm input-bordered w-32"
@@ -44,6 +54,7 @@ function ReportTable({ reports, handleChange, isAdmin }) {
                                 <input
                                     className="input input-sm input-bordered w-16"
                                     value={report.connect}
+                                    disabled={!canEdit}
                                     onChange={(e) =>
                                         handleChange(index, "connect", e.target.value)
                                     }
@@ -57,6 +68,7 @@ function ReportTable({ reports, handleChange, isAdmin }) {
                                     onChange={(e) =>
                                         handleChange(index, "accept", e.target.value)
                                     }
+                                    disabled={!canEdit}
                                 />
                             </td>
 
@@ -67,6 +79,7 @@ function ReportTable({ reports, handleChange, isAdmin }) {
                                     onChange={(e) =>
                                         handleChange(index, "publish", e.target.value)
                                     }
+                                    disabled={!canEdit}
                                 />
                             </td>
 
@@ -77,6 +90,7 @@ function ReportTable({ reports, handleChange, isAdmin }) {
                                     onChange={(e) =>
                                         handleChange(index, "upload", e.target.value)
                                     }
+                                    disabled={!canEdit}
                                 />
                             </td>
 
@@ -87,6 +101,7 @@ function ReportTable({ reports, handleChange, isAdmin }) {
                                     onChange={(e) =>
                                         handleChange(index, "balance", e.target.value)
                                     }
+                                    disabled={!canEdit}
                                 />
                             </td>
 
@@ -97,6 +112,7 @@ function ReportTable({ reports, handleChange, isAdmin }) {
                                     onChange={(e) =>
                                         handleChange(index, "earning", e.target.value)
                                     }
+                                    disabled={!canEdit}
                                 />
                             </td>
 
@@ -107,6 +123,7 @@ function ReportTable({ reports, handleChange, isAdmin }) {
                                     onChange={(e) =>
                                         handleChange(index, "workingTime", e.target.value)
                                     }
+                                    disabled={!canEdit}
                                 />
                             </td>
 
@@ -117,6 +134,7 @@ function ReportTable({ reports, handleChange, isAdmin }) {
                                     onChange={(e) =>
                                         handleChange(index, "totalAccount", e.target.value)
                                     }
+                                    disabled={!canEdit}
                                 />
                             </td>
 
@@ -127,6 +145,7 @@ function ReportTable({ reports, handleChange, isAdmin }) {
                                     onChange={(e) =>
                                         handleChange(index, "activeAccount", e.target.value)
                                     }
+                                    disabled={!canEdit}
                                 />
                             </td>
 
@@ -137,6 +156,7 @@ function ReportTable({ reports, handleChange, isAdmin }) {
                                     onChange={(e) =>
                                         handleChange(index, "lostAccount", e.target.value)
                                     }
+                                    disabled={!canEdit}
                                 />
                             </td>
 
@@ -147,11 +167,12 @@ function ReportTable({ reports, handleChange, isAdmin }) {
                                     onChange={(e) =>
                                         handleChange(index, "note", e.target.value)
                                     }
+                                    disabled={!canEdit}
                                 />
                             </td>
 
                         </tr>
-                    ))}
+                    )})}
 
                 </tbody>
 

@@ -20,16 +20,8 @@ export const fetchDailyReports = async ({
         .lte("report_date", safeEndDate)
         .order("report_date", { ascending: false })
 
-    if (isAdmin) {
-
-        if (selectedUserId && selectedUserId !== "all") {
-            query = query.eq("user_id", selectedUserId)
-        }
-
-    } else {
-
-        query = query.eq("user_id", userId)
-
+    if (isAdmin && selectedUserId && selectedUserId !== "all") {
+        query = query.eq("user_id", selectedUserId)
     }
 
     const { data, error } = await query

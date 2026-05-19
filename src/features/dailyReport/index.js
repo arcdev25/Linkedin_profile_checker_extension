@@ -34,6 +34,7 @@ function DailyReport(){
     const [reports, setReports] = useState([
         {
             no: 1,
+            userId: currentUser.id,
             user: currentUser.name,
             connect: 0,
             accept: 0,
@@ -214,6 +215,7 @@ function DailyReport(){
 
             const formattedData = data.map((item, index) => ({
                 no: index + 1,
+                userId: item.user_id,
                 user: item.user_name,
                 connect: item.connect_count,
                 accept: item.accept_count,
@@ -228,17 +230,38 @@ function DailyReport(){
                 note: item.note || "-"
             }))
 
-            if (formattedData.length > 0) {
-                setAlreadySubmitted(true)
-                setReports(formattedData)
-            } else {
-                setAlreadySubmitted(false)
-                setReports([
+            const currentUserReport = formattedData.find(
+                (report) =>
+                    String(report.userId).trim() === String(currentUser.id).trim()
+            )
+
+            let finalReports = [...formattedData]
+
+            if (!isAdmin && !currentUserReport) {
+                finalReports.unshift({
+                    no: 1,
+                    userId: currentUser.id,
+                    user: currentUser.name,
+                    connect: 0,
+                    accept: 0,
+                    publish: 0,
+                    upload: 0,
+                    balance: 0,
+                    earning: 0,
+                    workingTime: 0,
+                    totalAccount: 0,
+                    activeAccount: 0,
+                    lostAccount: 0,
+                    note: "-"
+                })
+            }
+
+            if (isAdmin && formattedData.length === 0 && selectedUserId !== "all") {
+                finalReports = [
                     {
                         no: 1,
-                        user: isAdmin
-                            ? owners.find((owner) => owner.id === selectedUserId)?.name || ""
-                            : currentUser.name,
+                        userId: selectedUserId,
+                        user: owners.find((owner) => owner.id === selectedUserId)?.name || "",
                         connect: 0,
                         accept: 0,
                         publish: 0,
@@ -251,8 +274,11 @@ function DailyReport(){
                         lostAccount: 0,
                         note: "-"
                     }
-                ])
+                ]
             }
+
+            setAlreadySubmitted(!!currentUserReport)
+            setReports(finalReports)
 
         } catch (error) {
             console.error(error)
@@ -261,9 +287,24 @@ function DailyReport(){
             setLoading(false)
         }
     }
+
     if (!currentUser) {
         return null
     }
+
+    const myReports = reports.filter(
+        (report) =>
+            String(report.userId).trim() ===
+            String(currentUser.id).trim()
+    )
+
+    const otherReports = reports.filter(
+        (report) =>
+            String(report.userId).trim() !==
+            String(currentUser.id).trim()
+    )
+
+    const summaryReports = isAdmin ? reports : myReports
 
     return(
         <div className="p-6">
@@ -290,7 +331,7 @@ function DailyReport(){
                 selectedDate={selectedDate}
             />
             
-            <SummaryCards reports={reports}/>
+            <SummaryCards reports={summaryReports} />
 
             {loading && (
                 <div className="flex justify-center mb-4">
@@ -298,39 +339,86 @@ function DailyReport(){
                 </div>
             )}
 
-            {!loading && (
-                <ReportTable
-                    reports={reports}
-                    handleChange={handleChange}
-                    isAdmin={isAdmin}
-                />
+            {!loading && !isAdmin && (
+                <>
+                    <h2 className="text-lg font-semibold mb-3">My Report</h2>
+
+                    <ReportTable
+                        reports={myReports}
+                        handleChange={handleChange}
+                        isAdmin={isAdmin}
+                        currentUser={currentUser}
+                        showUserColumns={false}
+                    />
+
+                    {saveMessage && (
+                        <div
+                            className={`alert mb-4 ${
+                                saveStatus === "success"
+                                    ? "alert-success"
+                                    : "alert-error"
+                            }`}
+                        >
+                            {saveMessage}
+                        </div>
+                    )}
+
+                    <div className="flex justify-end mt-6 mb-10">
+                        <button
+                            className={`btn btn-primary ${loading ? "loading" : ""}`}
+                            onClick={handleSaveReport}
+                            disabled={loading}
+                        >
+                            {alreadySubmitted ? "Update Report" : "Save Today's Report"}
+                        </button>
+                    </div>
+
+                    <h2 className="text-lg font-semibold mb-3">Other Users' Reports</h2>
+
+                    <ReportTable
+                        reports={otherReports}
+                        handleChange={handleChange}
+                        isAdmin={false}
+                        currentUser={currentUser}
+                        readonly={true}
+                        showUserColumns={true}
+                    />
+                </>
             )}
 
-            {saveMessage && (
-                <div
-                    className={`alert mb-4 ${
-                        saveStatus === "success"
-                            ? "alert-success"
-                            : "alert-error"
-                    }`}
-                >
-                    {saveMessage}
-                </div>
-            )}
+            {!loading && isAdmin && (
+                <>
+                    <ReportTable
+                        reports={reports}
+                        handleChange={handleChange}
+                        isAdmin={isAdmin}
+                        currentUser={currentUser}
+                        showUserColumns={true}
+                    />
 
-            <div className="flex justify-end mt-6">
-                <button
-                    className={`btn btn-primary ${loading ? "loading" : ""}`}
-                    onClick={handleSaveReport}
-                    disabled={loading || (isAdmin && selectedUserId === "all")}
-                >
-                    {isAdmin
-                        ? "Save Changes"
-                        : alreadySubmitted
-                            ? "Update Report"
-                            : "Save Today's Report"}
-                </button>
-            </div>
+                    {saveMessage && (
+                        <div
+                            className={`alert mb-4 ${
+                                saveStatus === "success"
+                                    ? "alert-success"
+                                    : "alert-error"
+                            }`}
+                        >
+                            {saveMessage}
+                        </div>
+                    )}
+
+                    <div className="flex justify-end mt-6">
+                        <button
+                            className={`btn btn-primary ${loading ? "loading" : ""}`}
+                            onClick={handleSaveReport}
+                            disabled={loading || selectedUserId === "all"}
+                        >
+                            Save Changes
+                        </button>
+                    </div>
+                </>
+            )}
         </div>
     )
 }
