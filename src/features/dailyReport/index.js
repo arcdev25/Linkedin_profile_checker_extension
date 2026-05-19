@@ -67,7 +67,7 @@ function DailyReport(){
     
     const handleSaveReport = async () => {
 
-        const  startDate  = getDateRange()
+        const { startDate }  = getDateRange()
         
         try {
 
@@ -261,7 +261,6 @@ function DailyReport(){
             setLoading(false)
         }
     }
-    console.log('currentuser', currentUser)
     if (!currentUser) {
         return null
     }
