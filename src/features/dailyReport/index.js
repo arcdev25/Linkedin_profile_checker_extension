@@ -50,9 +50,18 @@ function DailyReport(){
         }
     ])
 
-    const handleChange = (index, field, value) => {
-        const updatedReports = [...reports]
-        updatedReports[index][field] = value
+    const handleChange = (userId, field, value) => {
+        const updatedReports = reports.map((report) => {
+            if (String(report.userId) === String(userId)) {
+                return {
+                    ...report,
+                    [field]: value
+                }
+            }
+
+            return report
+        })
+
         setReports(updatedReports)
     }
 
@@ -118,25 +127,35 @@ function DailyReport(){
         }
     }
 
-    const getBusinessDate = () => {
+    const getBusinessDate = (offset = 0) => {
+        const japanDateText = new Intl.DateTimeFormat("en-CA", {
+            timeZone: "Asia/Tokyo",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit"
+        }).format(new Date())
 
-        const now = new Date()
-
-        // Convert to Japan timezone
-        const japanTime = new Date(
-            now.toLocaleString("en-US", {
-                timeZone: "Asia/Tokyo"
-            })
+        const japanHour = Number(
+            new Intl.DateTimeFormat("en-US", {
+                timeZone: "Asia/Tokyo",
+                hour: "2-digit",
+                hour12: false
+            }).format(new Date())
         )
 
-        // Before 6AM → previous day
-        if (japanTime.getHours() < 6) {
-            japanTime.setDate(japanTime.getDate() - 1)
+        const date = new Date(`${japanDateText}T00:00:00`)
+
+        if (japanHour < 6) {
+            date.setDate(date.getDate() - 1)
         }
 
-        return japanTime.toLocaleDateString("en-CA")
+        date.setDate(date.getDate() - offset)
+        return date.toLocaleDateString("en-CA")
     }
 
+    const formatDate = (date) => {
+        return date.toLocaleDateString("en-CA")
+    }
     const getDateRange = () => {
 
         const businessDate = getBusinessDate()
@@ -181,10 +200,9 @@ function DailyReport(){
             default:
                 break
         }
-
         return {
-            startDate: startDate.toISOString().split("T")[0],
-            endDate: endDate.toISOString().split("T")[0]
+            startDate: formatDate(startDate),
+            endDate: formatDate(endDate)
         }
     }
 

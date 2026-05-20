@@ -7,6 +7,14 @@ function ReportTable({
     showUserColumns = false
 }) {
 
+    const handleNumericChange = (userId, field, value) => {
+        const numericRegex = /^\d*\.?\d*$/
+
+        if (numericRegex.test(value)) {
+            handleChange(userId, field, value)
+        }
+    }
+
     return (
         <div className="overflow-x-auto bg-base-100 rounded-lg shadow">
 
@@ -52,21 +60,25 @@ function ReportTable({
 
                             <td>
                                 <input
+                                    type="text"
+                                    inputMode="decimal"
                                     className="input input-sm input-bordered w-16"
                                     value={report.connect}
                                     disabled={!canEdit}
                                     onChange={(e) =>
-                                        handleChange(index, "connect", e.target.value)
+                                        handleNumericChange(report.userId, "connect", e.target.value)
                                     }
                                 />
                             </td>
 
                             <td>
                                 <input
+                                    type="text"
+                                    inputMode="decimal"
                                     className="input input-sm input-bordered w-16"
                                     value={report.accept}
                                     onChange={(e) =>
-                                        handleChange(index, "accept", e.target.value)
+                                        handleNumericChange(report.userId, "accept", e.target.value)
                                     }
                                     disabled={!canEdit}
                                 />
@@ -74,10 +86,12 @@ function ReportTable({
 
                             <td>
                                 <input
+                                    type="text"
+                                    inputMode="decimal"
                                     className="input input-sm input-bordered w-16"
                                     value={report.publish}
                                     onChange={(e) =>
-                                        handleChange(index, "publish", e.target.value)
+                                        handleNumericChange(report.userId, "publish", e.target.value)
                                     }
                                     disabled={!canEdit}
                                 />
@@ -85,10 +99,12 @@ function ReportTable({
 
                             <td>
                                 <input
+                                    type="text"
+                                    inputMode="decimal"
                                     className="input input-sm input-bordered w-16"
                                     value={report.upload}
                                     onChange={(e) =>
-                                        handleChange(index, "upload", e.target.value)
+                                        handleNumericChange(report.userId, "upload", e.target.value)
                                     }
                                     disabled={!canEdit}
                                 />
@@ -96,10 +112,12 @@ function ReportTable({
 
                             <td>
                                 <input
+                                    type="text"
+                                    inputMode="decimal"
                                     className="input input-sm input-bordered w-16"
                                     value={report.balance}
                                     onChange={(e) =>
-                                        handleChange(index, "balance", e.target.value)
+                                        handleNumericChange(report.userId, "balance", e.target.value)
                                     }
                                     disabled={!canEdit}
                                 />
@@ -107,10 +125,12 @@ function ReportTable({
 
                             <td>
                                 <input
+                                    type="text"
+                                    inputMode="decimal"
                                     className="input input-sm input-bordered w-16"
                                     value={report.earning}
                                     onChange={(e) =>
-                                        handleChange(index, "earning", e.target.value)
+                                        handleNumericChange(report.userId, "earning", e.target.value)
                                     }
                                     disabled={!canEdit}
                                 />
@@ -118,10 +138,12 @@ function ReportTable({
 
                             <td>
                                 <input
+                                    type="text"
+                                    inputMode="decimal"
                                     className="input input-sm input-bordered w-20"
                                     value={report.workingTime}
                                     onChange={(e) =>
-                                        handleChange(index, "workingTime", e.target.value)
+                                        handleNumericChange(report.userId, "workingTime", e.target.value)
                                     }
                                     disabled={!canEdit}
                                 />
@@ -129,10 +151,12 @@ function ReportTable({
 
                             <td>
                                 <input
+                                    type="text"
+                                    inputMode="decimal"
                                     className="input input-sm input-bordered w-20"
                                     value={report.totalAccount}
                                     onChange={(e) =>
-                                        handleChange(index, "totalAccount", e.target.value)
+                                        handleNumericChange(report.userId, "totalAccount", e.target.value)
                                     }
                                     disabled={!canEdit}
                                 />
@@ -140,10 +164,12 @@ function ReportTable({
 
                             <td>
                                 <input
+                                    type="text"
+                                    inputMode="decimal"
                                     className="input input-sm input-bordered w-20"
                                     value={report.activeAccount}
                                     onChange={(e) =>
-                                        handleChange(index, "activeAccount", e.target.value)
+                                        handleNumericChange(report.userId, "activeAccount", e.target.value)
                                     }
                                     disabled={!canEdit}
                                 />
@@ -151,10 +177,12 @@ function ReportTable({
 
                             <td>
                                 <input
+                                    type="text"
+                                    inputMode="decimal"
                                     className="input input-sm input-bordered w-20"
                                     value={report.lostAccount}
                                     onChange={(e) =>
-                                        handleChange(index, "lostAccount", e.target.value)
+                                        handleNumericChange(report.userId, "lostAccount", e.target.value)
                                     }
                                     disabled={!canEdit}
                                 />
@@ -165,7 +193,7 @@ function ReportTable({
                                     className="input input-sm input-bordered w-28"
                                     value={report.note}
                                     onChange={(e) =>
-                                        handleChange(index, "note", e.target.value)
+                                        handleChange(report.userId, "note", e.target.value)
                                     }
                                     disabled={!canEdit}
                                 />

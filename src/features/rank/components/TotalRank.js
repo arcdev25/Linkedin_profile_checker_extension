@@ -32,7 +32,7 @@ function TotalRank(){
         )
     }
 
-    const getRankingDate = () => {
+    const getBusinessDate = () => {
 
         const now = new Date()
 
@@ -42,10 +42,6 @@ function TotalRank(){
             })
         )
 
-        // Always use previous completed business day
-        japanTime.setDate(japanTime.getDate() - 1)
-
-        // Before 6AM, go back one more day
         if (japanTime.getHours() < 6) {
             japanTime.setDate(japanTime.getDate() - 1)
         }
@@ -53,15 +49,23 @@ function TotalRank(){
         return japanTime.toLocaleDateString("en-CA")
     }
 
+    const getRankingDate = () => {
+        const businessDate = getBusinessDate()
+
+        const date = new Date(`${businessDate}T00:00:00`)
+        date.setDate(date.getDate() - 1)
+
+        return date.toLocaleDateString("en-CA")
+    }
+
     const loadRankData = async () => {
 
-        const today = getRankingDate()
-        console.log(today)
+        const rankingDate = getRankingDate()
 
         const { data, error } = await supabase
             .from("daily_reports")
             .select("*")
-            .eq("report_date", today)
+            .eq("report_date", rankingDate)
 
         if (error) {
             console.error(error)
