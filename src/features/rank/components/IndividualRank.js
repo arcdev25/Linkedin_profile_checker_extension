@@ -3,7 +3,7 @@ import IndividualRankTable from "./IndividualRankTable"
 import { useState, useEffect } from "react"
 import { supabase } from "../../../app/supabaseClient"
 
-function IndividualRank(){
+function IndividualRank() {
     const [activeMetric, setActiveMetric] = useState("total")
     const [selectedMonth, setSelectedMonth] = useState(4)
     const [selectedYear, setSelectedYear] = useState(2026)
@@ -221,7 +221,7 @@ function IndividualRank(){
         }
     })
 
-    return(
+    return (
         <div className="p-6">
             <h3 className="text-4xl font-bold mb-6">
                 Individual Rank
@@ -338,6 +338,7 @@ function IndividualRank(){
                 />
 
             )}
+    
         </div>
     )
 }

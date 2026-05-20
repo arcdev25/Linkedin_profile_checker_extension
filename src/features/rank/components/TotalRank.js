@@ -193,6 +193,7 @@ function TotalRank(){
             return
         }
 
+        console.log("monthly reports", data)
         const groupedByDate = {}
 
         data.forEach((item) => {
@@ -206,6 +207,7 @@ function TotalRank(){
             groupedByDate[date].push(item)
         })
 
+        console.log("groupedByDate", groupedByDate)
 
         const monthlyHistory = {}
 
