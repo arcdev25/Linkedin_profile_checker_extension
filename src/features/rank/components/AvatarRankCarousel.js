@@ -33,6 +33,10 @@ function AvatarRankCarousel({ users }) {
                         <motion.div
                             key={user.name}
                             layout
+                            animate={{
+                                scale: isWinner ? 1 : 0.8,
+                                opacity: isWinner ? 0.8 : 0.6
+                            }}
                             transition={{
                                 type: "spring",
                                 stiffness: 220,
@@ -40,11 +44,7 @@ function AvatarRankCarousel({ users }) {
                             }}
                             className={`
                                 flex flex-col items-center
-                                ${
-                                    isWinner
-                                        ? "scale-125 z-10"
-                                        : "scale-100 opacity-80"
-                                }
+                                ${isWinner ? "z-10" : ""}
                             `}
                         >
                             <div
