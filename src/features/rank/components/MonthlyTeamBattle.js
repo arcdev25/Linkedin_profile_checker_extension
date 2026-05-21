@@ -71,13 +71,7 @@ function MonthlyTeamBattle({
                             {days.map((day) => (
                                 <th
                                     key={day}
-                                    onClick={() => {
-
-                                        if (day <= currentBusinessDay) {
-                                            setSelectedDay(day)
-                                        }
-
-                                    }}
+                                    onClick={() => setSelectedDay(day)}
                                     className={`
                                         text-center
                                         text-[10px]

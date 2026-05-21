@@ -81,7 +81,15 @@ function DailyReport(){
         
         try {
 
-            const report = reports[0]
+            const report = isAdmin
+                ? reports.find((item) => String(item.userId) === String(selectedUserId))
+                : reports.find((item) => String(item.userId) === String(currentUser.id))
+                
+            if (!report) {
+                setSaveStatus("error")
+                setSaveMessage("No report row found to save")
+                return
+            }
             const targetUserId =
                 isAdmin && selectedUserId !== "all"
                     ? selectedUserId

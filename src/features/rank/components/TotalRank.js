@@ -6,8 +6,8 @@ function TotalRank(){
 
     const [rankData, setRankData] = useState([])
     const [battleHistory, setBattleHistory] = useState({})
-    const [selectedDay, setSelectedDay] = useState(null)
     const [rankLoading, setRankLoading] = useState(false)
+    const [selectedDay, setSelectedDay] = useState(null)
 
     const [selectedMonth, setSelectedMonth] = useState(
         new Date().getMonth()
