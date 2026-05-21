@@ -1,9 +1,11 @@
-function SummaryCards({ reports }) {
+function SummaryCards({ reports, rawReports }) {
 
     const totalConnect = reports.reduce((sum, item) => sum + Number(item.connect || 0), 0)
     const totalAccept = reports.reduce((sum, item) => sum + Number(item.accept || 0), 0)
     const totalPublish = reports.reduce((sum, item) => sum + Number(item.publish || 0), 0)
     const totalUpload = reports.reduce((sum, item) => sum + Number(item.upload || 0), 0)
+    console.log("reports length", rawReports.length)
+    console.log("reports", rawReports)
     const totalWorkingHours = reports.reduce(
         (sum, item) => sum + Number(item.workingTime || 0),
         0
@@ -11,7 +13,7 @@ function SummaryCards({ reports }) {
 
     const averageWorkingHours =
         reports.length > 0
-            ? (totalWorkingHours / reports.length).toFixed(1)
+            ? (totalWorkingHours / rawReports.length).toFixed(1)
             : 0
 
     const acceptanceRate = totalConnect > 0

@@ -1,7 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Sora:wght@300;400;500;600;700;800&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+body{
+    font-family: 'Outfit', sans-serif;
+}
+
+th{
+    font-family: 'Sora', 'font-extrabold'
+}
 .loading-indicator:before {
     content: '';
     background: #00000080;

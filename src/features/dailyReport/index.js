@@ -17,6 +17,7 @@ function DailyReport(){
     const [saveStatus, setSaveStatus] = useState("")
     const [owners, setOwners] = useState([])
     const [selectedUserId, setSelectedUserId] = useState("all")
+    const [rawReports, setRawReports] = useState([])
 
     const currentUser = useSelector((state) => state.auth.user)
     const isAdmin = currentUser?.role === "admin"
@@ -222,6 +223,48 @@ function DailyReport(){
             console.error(error)
         }
     }
+
+    const groupReportsByUser = (data) => {
+        const grouped = {}
+
+        data.forEach((report) => {
+            const key = report.userId
+
+            if (!grouped[key]) {
+                grouped[key] = {
+                    ...report,
+                    connect: 0,
+                    accept: 0,
+                    publish: 0,
+                    upload: 0,
+                    balance: 0,
+                    earning: 0,
+                    workingTime: 0,
+                    totalAccount: 0,
+                    activeAccount: 0,
+                    lostAccount: 0,
+                    note: "-"
+                }
+            }
+
+            grouped[key].connect += Number(report.connect || 0)
+            grouped[key].accept += Number(report.accept || 0)
+            grouped[key].publish += Number(report.publish || 0)
+            grouped[key].upload += Number(report.upload || 0)
+            grouped[key].balance += Number(report.balance || 0)
+            grouped[key].earning += Number(report.earning || 0)
+            grouped[key].workingTime += Number(report.workingTime || 0)
+            grouped[key].totalAccount += Number(report.totalAccount || 0)
+            grouped[key].activeAccount += Number(report.activeAccount || 0)
+            grouped[key].lostAccount += Number(report.lostAccount || 0)
+        })
+
+        return Object.values(grouped).map((report, index) => ({
+            ...report,
+            no: index + 1,
+            workingTime: Number(report.workingTime.toFixed(2))
+        }))
+    }
     
     const loadReports = async () => {
 
@@ -238,6 +281,7 @@ function DailyReport(){
                 startDate,
                 endDate
             })
+            setRawReports(data)
 
             const formattedData = data.map((item, index) => ({
                 no: index + 1,
@@ -256,12 +300,18 @@ function DailyReport(){
                 note: item.note || "-"
             }))
 
-            const currentUserReport = formattedData.find(
+            const shouldGroupByUser = !["Today", "Yesterday", "Custom"].includes(selectedFilter)
+
+            const displayData = shouldGroupByUser
+                ? groupReportsByUser(formattedData)
+                : formattedData
+
+            const currentUserReport = displayData.find(
                 (report) =>
                     String(report.userId).trim() === String(currentUser.id).trim()
             )
 
-            let finalReports = [...formattedData]
+            let finalReports = [...displayData]
 
             if (!isAdmin && !currentUserReport) {
                 finalReports.unshift({
@@ -282,7 +332,7 @@ function DailyReport(){
                 })
             }
 
-            if (isAdmin && formattedData.length === 0 && selectedUserId !== "all") {
+            if (isAdmin && displayData.length === 0 && selectedUserId !== "all") {
                 finalReports = [
                     {
                         no: 1,
@@ -332,6 +382,14 @@ function DailyReport(){
 
     const summaryReports = isAdmin ? reports : myReports
 
+    const summaryRawReports = isAdmin
+        ? rawReports
+        : rawReports.filter(
+            (report) =>
+                String(report.user_id).trim() ===
+                String(currentUser.id).trim()
+        )
+
     return(
         <div className="p-6">
             
@@ -357,7 +415,7 @@ function DailyReport(){
                 selectedDate={selectedDate}
             />
             
-            <SummaryCards reports={summaryReports} />
+            <SummaryCards reports={summaryReports} rawReports={summaryRawReports} />
 
             {loading && (
                 <div className="flex justify-center mb-4">

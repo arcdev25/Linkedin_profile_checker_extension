@@ -65,7 +65,7 @@ function AvatarRankCarousel({ users }) {
                                         ${
                                             isWinner
                                                 ? "w-32 h-32"
-                                                : "w-28 h-28"
+                                                : "w-24 h-24"
                                         }
                                     `}
                                 />

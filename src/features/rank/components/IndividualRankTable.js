@@ -49,6 +49,34 @@ function IndividualRankTable({
     ]
 
     const years = [2024, 2025, 2026, 2027]
+
+    const getBusinessDate = () => {
+        const now = new Date()
+
+        const japanTime = new Date(
+            now.toLocaleString("en-US", {
+                timeZone: "Asia/Tokyo"
+            })
+        )
+
+        if (japanTime.getHours() < 6) {
+            japanTime.setDate(japanTime.getDate() - 1)
+        }
+
+        return japanTime
+    }
+
+    const currentBusinessDate = getBusinessDate()
+
+    const isFutureDay = (day) => {
+        const targetDate = new Date(
+            selectedYear,
+            selectedMonth,
+            day
+        )
+
+        return targetDate > currentBusinessDate
+    }
     
 
     return (
@@ -155,37 +183,50 @@ function IndividualRankTable({
                         <tr>
                             <th className="w-40 py-3 text-sm">User</th>
 
-                            {days.map((day) => (
-                                <th
-                                    key={day}
-                                    onClick={() => setSelectedDay(day)}
-                                    className={`
-                                        py-3
-                                        text-sm
-                                        cursor-pointer
-                                        transition-all
-                                        duration-300
-                                        rounded-xl
+                            {days.map((day) => {
+                                const disabled = isFutureDay(day)
 
-                                        ${
-                                            selectedDay === day
-                                                ? `
-                                                    text-yellow-300
-                                                    scale-125
-                                                    drop-shadow-[0_0_8px_#facc15]
-                                                `
-                                                : `
-                                                    hover:text-purple-300
-                                                    hover:scale-110
-                                                `
-                                        }
-                                    `}
-                                >
-                                    {day}
-                                </th>
-                            ))}
+                                return (
+                                    <th
+                                        key={day}
+                                        onClick={() => {
+                                            if (!disabled) {
+                                                setSelectedDay(day)
+                                            }
+                                        }}
+                                        className="py-3 text-sm"
+                                    >
+                                        <div
+                                            className={`
+                                                inline-flex
+                                                items-center
+                                                justify-center
+                                                w-8
+                                                h-5
+                                                font-bold
+                                                transition-all
+                                                duration-300
 
-                            <th className="w-20 py-3 text-xl text-yellow-400">
+                                                ${
+                                                    disabled
+                                                        ? "text-slate-600 cursor-not-allowed opacity-40"
+                                                        : "cursor-pointer text-slate-300 hover:text-purple-300 hover:scale-110"
+                                                }
+
+                                                ${
+                                                    selectedDay === day && !disabled
+                                                        ? "text-yellow-300 scale-125 drop-shadow-[0_0_10px_#facc15]"
+                                                        : ""
+                                                }
+                                            `}
+                                        >
+                                            {day}
+                                        </div>
+                                    </th>
+                                )
+                            })}
+
+                            <th className="w-20 py-3 text-sm text-yellow-400 font-['Sora'] font-extrabold">
                                 MVP
                             </th>
                         </tr>
