@@ -3,7 +3,7 @@ function MonthlyTeamBattle({
     selectedMonth,
     selectedYear,
     selectedDay,
-    setSelectedDay
+    setSelectedDay,
 }){
 
     const getBusinessDate = () => {

@@ -68,6 +68,7 @@ function ReportTable({
                                     onChange={(e) =>
                                         handleNumericChange(report.userId, "connect", e.target.value)
                                     }
+                                    disabled
                                 />
                             </td>
 

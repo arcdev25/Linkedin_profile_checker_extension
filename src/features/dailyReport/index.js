@@ -4,7 +4,7 @@ import FilterBar from "./components/FilterBar"
 import SummaryCards from "./components/SummaryCards"
 import ReportTable from "./components/ReportTable"
 import PeriodLabel from "./components/PeriodLabel"
-import { fetchDailyReports, saveDailyReport, fetchOwners } from "./services/dailyReportService"
+import { fetchDailyReports, saveDailyReport, fetchOwners, fetchDashboardConnectCount } from "./services/dailyReportService"
 import UserFilter from "./components/UserFilter"
 
 
@@ -23,6 +23,9 @@ function DailyReport(){
     const isAdmin = currentUser?.role === "admin"
 
     const [selectedFilter, setSelectedFilter] = useState("Today")
+
+    const [dashboardConnectCount, setDashboardConnectCount] = useState(0)
+    
     const filterButtons = [
         "Today",
         "Yesterday",
@@ -106,7 +109,7 @@ function DailyReport(){
                 user_name: targetUserName,
                 report_date: startDate,
 
-                connect_count: Number(report.connect),
+                connect_count: Number(dashboardConnectCount || 0),
                 accept_count: Number(report.accept),
                 publish_count: Number(report.publish),
                 upload_count: Number(report.upload),
@@ -226,6 +229,7 @@ function DailyReport(){
 
     const groupReportsByUser = (data) => {
         const grouped = {}
+        const yesterdayDate = getBusinessDate(1)
 
         data.forEach((report) => {
             const key = report.userId
@@ -254,8 +258,10 @@ function DailyReport(){
             grouped[key].balance += Number(report.balance || 0)
             grouped[key].earning += Number(report.earning || 0)
             grouped[key].workingTime += Number(report.workingTime || 0)
-            grouped[key].totalAccount += Number(report.totalAccount || 0)
-            grouped[key].activeAccount += Number(report.activeAccount || 0)
+            if (report.reportDate === yesterdayDate) {
+                grouped[key].totalAccount = Number(report.totalAccount || 0)
+                grouped[key].activeAccount = Number(report.activeAccount || 0)
+            }
             grouped[key].lostAccount += Number(report.lostAccount || 0)
         })
 
@@ -265,12 +271,19 @@ function DailyReport(){
             workingTime: Number(report.workingTime.toFixed(2))
         }))
     }
-    
+
     const loadReports = async () => {
 
         setLoading(true)
 
         const { startDate, endDate } = getDateRange()
+        const connectCount = await fetchDashboardConnectCount({
+            userId: currentUser.id,
+            startDate,
+            endDate
+        })
+
+        setDashboardConnectCount(connectCount)
 
         try {
             
@@ -287,6 +300,7 @@ function DailyReport(){
                 no: index + 1,
                 userId: item.user_id,
                 user: item.user_name,
+                reportDate: item.report_date,
                 connect: item.connect_count,
                 accept: item.accept_count,
                 publish: item.publish_count,
@@ -354,6 +368,20 @@ function DailyReport(){
             }
 
             setAlreadySubmitted(!!currentUserReport)
+            finalReports = finalReports.map((report) => {
+
+                if (
+                    String(report.userId) ===
+                    String(currentUser.id)
+                ) {
+                    return {
+                        ...report,
+                        connect: connectCount
+                    }
+                }
+
+                return report
+            })
             setReports(finalReports)
 
         } catch (error) {
