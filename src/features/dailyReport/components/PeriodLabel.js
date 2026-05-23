@@ -1,14 +1,16 @@
-function PeriodLabel({ selectedFilter, selectedDate }) {
+function PeriodLabel({ selectedFilter, dateRange }) {
+
+    const { startDate, endDate } = dateRange
 
     const label =
-        selectedFilter === "Custom" && selectedDate
-            ? selectedDate
-            : selectedFilter
+        startDate === endDate
+            ? startDate
+            : `${startDate} ~ ${endDate}`
 
     return (
-        <div className="mb-4 text-sm text-gray-500">
-            Showing reports for:
-            <span className="font-semibold ml-1">
+        <div className="text-sm opacity-70 mb-4">
+            Showing reports for:{" "}
+            <span className="font-bold">
                 {label}
             </span>
         </div>

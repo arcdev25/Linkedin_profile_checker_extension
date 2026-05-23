@@ -7,10 +7,30 @@ import PeriodLabel from "./components/PeriodLabel"
 import { fetchDailyReports, saveDailyReport, fetchOwners, fetchDashboardConnectCount } from "./services/dailyReportService"
 import UserFilter from "./components/UserFilter"
 
-
 function DailyReport(){
+
+    const getInitialBusinessDate = () => {
+        const now = new Date()
+
+        const japanTime = new Date(
+            now.toLocaleString("en-US", {
+                timeZone: "Asia/Tokyo"
+            })
+        )
+
+        if (japanTime.getHours() < 6) {
+            japanTime.setDate(japanTime.getDate() - 1)
+        }
+
+        return japanTime.toLocaleDateString("en-CA")
+    }
     
-    const [selectedDate, setSelectedDate] = useState("")
+    const today = getInitialBusinessDate()
+
+    const [dateRange, setDateRange] = useState({
+        startDate: today,
+        endDate: today
+    })
     const [loading, setLoading] = useState(false)
     const [alreadySubmitted, setAlreadySubmitted] = useState(false)
     const [saveMessage, setSaveMessage] = useState("")
@@ -77,7 +97,7 @@ function DailyReport(){
             loadOwners()
         }
 
-    }, [selectedFilter, selectedDate, selectedUserId])
+    }, [selectedFilter, dateRange, selectedUserId])
     
     const handleSaveReport = async () => {
 
@@ -205,8 +225,17 @@ function DailyReport(){
                 break
 
             case "Custom":
-                startDate = new Date(selectedDate)
-                endDate = new Date(selectedDate)
+
+                if (
+                    !dateRange.startDate ||
+                    !dateRange.endDate
+                ) {
+                    break
+                }
+
+                startDate = new Date(dateRange.startDate)
+                endDate = new Date(dateRange.endDate)
+
                 break
 
             default:
@@ -425,8 +454,8 @@ function DailyReport(){
                 filterButtons={filterButtons}
                 selectedFilter={selectedFilter}
                 setSelectedFilter={setSelectedFilter}
-                selectedDate={selectedDate}
-                setSelectedDate={setSelectedDate}
+                dateRange={dateRange}
+                setDateRange={setDateRange}
             />
             {isAdmin && (
                 <div className="mb-4">
@@ -437,10 +466,10 @@ function DailyReport(){
                     />
                 </div>
             )}
-
+           
             <PeriodLabel
                 selectedFilter={selectedFilter}
-                selectedDate={selectedDate}
+                dateRange={getDateRange()}
             />
             
             <SummaryCards reports={summaryReports} rawReports={summaryRawReports} />

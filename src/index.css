@@ -2,6 +2,8 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@import "react-date-range/dist/styles.css";
+@import "react-date-range/dist/theme/default.css";
 
 body{
     font-family: 'Outfit', sans-serif;
@@ -56,4 +58,117 @@ th{
         5% 35%,
         39% 32%
     );
+}
+
+/* react-tailwindcss-datepicker dark fix */
+.react-tailwindcss-datepicker {
+    position: relative;
+    z-index: 50;
+}
+
+.react-tailwindcss-datepicker > div:last-child {
+    background: #111827 !important;
+    color: #dbeafe !important;
+    border: 1px solid rgba(99, 102, 241, 0.4) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 0 35px rgba(99, 102, 241, 0.35) !important;
+}
+
+.react-tailwindcss-datepicker button,
+.react-tailwindcss-datepicker span,
+.react-tailwindcss-datepicker p {
+    color: #dbeafe !important;
+}
+
+.react-tailwindcss-datepicker button:hover {
+    background: rgba(99, 102, 241, 0.18) !important;
+}
+
+.react-tailwindcss-datepicker .bg-blue-500,
+.react-tailwindcss-datepicker .bg-indigo-500 {
+    background: #6366f1 !important;
+}
+
+
+/* =========================
+   DATE PICKER DARK THEME
+========================= */
+
+.react-tailwindcss-datepicker {
+    position: relative;
+    z-index: 50;
+    font-family: 'Outfit', sans-serif;
+}
+
+/* input */
+.react-tailwindcss-datepicker input {
+    background: #111827 !important;
+    color: #dbeafe !important;
+    border: 1px solid rgba(99, 102, 241, 0.35) !important;
+    border-radius: 14px !important;
+    height: 44px !important;
+    box-shadow:
+        0 0 10px rgba(99, 102, 241, 0.12);
+}
+
+/* popup */
+.react-tailwindcss-datepicker > div:last-child {
+    background: #0b1120 !important;
+    color: #dbeafe !important;
+    border: 1px solid rgba(99, 102, 241, 0.35) !important;
+    border-radius: 18px !important;
+
+    box-shadow:
+        0 0 40px rgba(99, 102, 241, 0.25),
+        0 0 100px rgba(168, 85, 247, 0.08) !important;
+
+    overflow: hidden;
+}
+
+/* text */
+.react-tailwindcss-datepicker button,
+.react-tailwindcss-datepicker span,
+.react-tailwindcss-datepicker p,
+.react-tailwindcss-datepicker div {
+    color: #dbeafe !important;
+}
+
+/* hover */
+.react-tailwindcss-datepicker button:hover {
+    background: rgba(99, 102, 241, 0.16) !important;
+}
+
+/* selected date */
+.react-tailwindcss-datepicker .bg-blue-500,
+.react-tailwindcss-datepicker .bg-indigo-500 {
+    background: linear-gradient(
+        135deg,
+        #6366f1,
+        #8b5cf6
+    ) !important;
+
+    box-shadow:
+        0 0 12px rgba(99, 102, 241, 0.45);
+}
+
+/* in-range */
+.react-tailwindcss-datepicker .bg-blue-100,
+.react-tailwindcss-datepicker .bg-indigo-100 {
+    background: rgba(99, 102, 241, 0.18) !important;
+}
+
+/* shortcut left menu */
+.react-tailwindcss-datepicker .border-r {
+    border-color: rgba(255,255,255,0.08) !important;
+}
+
+/* month header */
+.react-tailwindcss-datepicker .font-medium {
+    color: #ffffff !important;
+}
+
+/* today */
+.react-tailwindcss-datepicker .text-blue-500,
+.react-tailwindcss-datepicker .text-indigo-500 {
+    color: #818cf8 !important;
 }
