@@ -2,8 +2,6 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import "react-date-range/dist/styles.css";
-@import "react-date-range/dist/theme/default.css";
 
 body{
     font-family: 'Outfit', sans-serif;
