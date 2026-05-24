@@ -122,6 +122,29 @@ export const getDashboardStats = createAsyncThunk('/dashboard/stats', async (par
     if (updatedResult.error) throw updatedResult.error
     const updatedContacts = updatedResult.data
 
+    // For each non-pending status, split into:
+    //   - "new": contacted_at is within the selected date range (contacted and updated in range)
+    //   - "past": contacted_at is before the selected date range (old contact, updated in range)
+    const statusBreakdown = {}
+    const rangeStart = startDate ? getTimezoneStartIso(startDate) : null
+    const rangeEnd   = endDate   ? getTimezoneEndIso(endDate)     : null
+
+    updatedContacts.forEach(c => {
+        const status = c.status
+        if (!statusBreakdown[status]) {
+            statusBreakdown[status] = { new: 0, past: 0 }
+        }
+        const contactedAt = c.contacted_at
+        const isNew = rangeStart && rangeEnd
+            ? contactedAt >= rangeStart && contactedAt <= rangeEnd
+            : true
+        if (isNew) {
+            statusBreakdown[status].new += 1
+        } else {
+            statusBreakdown[status].past += 1
+        }
+    })
+
     // Status counts: pending from createdContacts, rest from updatedContacts
     const statusCounts = {
         pending: createdContacts.filter(c => c.status === 'pending').length,
@@ -163,6 +186,7 @@ export const getDashboardStats = createAsyncThunk('/dashboard/stats', async (par
         return {
             date,
             total: dayCreated.length,
+            accept: dayUpdated.filter(c => c.status === 'accept').length,
             success: dayUpdated.filter(c => c.status === 'success').length,
             pending: dayCreated.filter(c => c.status === 'pending').length,
             chatting: dayUpdated.filter(c => c.status === 'chatting').length
@@ -174,6 +198,7 @@ export const getDashboardStats = createAsyncThunk('/dashboard/stats', async (par
         totalContacts: contacts.length,
         totalRecruiters: recruiters.length,
         statusCounts,
+        statusBreakdown,
         recruiterStats,
         dailyStats,
         recentContacts: contacts
@@ -203,6 +228,7 @@ export const dashboardSlice = createSlice({
             totalContacts: 0,
             totalRecruiters: 0,
             statusCounts: {},
+            statusBreakdown: {},
             recruiterStats: [],
             dailyStats: [],
             recentContacts: []

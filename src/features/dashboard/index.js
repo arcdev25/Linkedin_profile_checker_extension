@@ -74,31 +74,51 @@ function Dashboard(){
             title: "Accept", 
             value: (stats.statusCounts.accept || 0).toString(), 
             icon: <CircleStackIcon className='w-8 h-8'/>, 
-            description: "Awaiting response"
+            description: "Awaiting response",
+            tooltip: {
+                new:  stats.statusBreakdown?.accept?.new  ?? 0,
+                past: stats.statusBreakdown?.accept?.past ?? 0
+            }
         },
         {
             title: "Chatting", 
             value: (stats.statusCounts.chatting || 0).toString(), 
             icon: <ChatBubbleBottomCenterIcon className='w-8 h-8'/>, 
-            description: "Active conversations"
+            description: "Active conversations",
+            tooltip: {
+                new:  stats.statusBreakdown?.chatting?.new  ?? 0,
+                past: stats.statusBreakdown?.chatting?.past ?? 0
+            }
         },
         {
             title: "Not Interested", 
             value: (stats.statusCounts['not interested'] || 0).toString(), 
             icon: <HandThumbDownIcon className='w-8 h-8'/>, 
-            description: "Declined offers"
+            description: "Declined offers",
+            tooltip: {
+                new:  stats.statusBreakdown?.['not interested']?.new  ?? 0,
+                past: stats.statusBreakdown?.['not interested']?.past ?? 0
+            }
         },
         {
             title: "Failed", 
             value: (stats.statusCounts.failed || 0).toString(), 
             icon: <ExclamationTriangleIcon className='w-8 h-8'/>, 
-            description: "Failed attempts"
+            description: "Failed attempts",
+            tooltip: {
+                new:  stats.statusBreakdown?.failed?.new  ?? 0,
+                past: stats.statusBreakdown?.failed?.past ?? 0
+            }
         },
         {
             title: "Success", 
             value: (stats.statusCounts.success || 0).toString(), 
             icon: <CheckCircleIcon className='w-8 h-8'/>, 
-            description: "Successful conversion"
+            description: "Successful conversion",
+            tooltip: {
+                new:  stats.statusBreakdown?.success?.new  ?? 0,
+                past: stats.statusBreakdown?.success?.past ?? 0
+            }
         },
     ]
 
