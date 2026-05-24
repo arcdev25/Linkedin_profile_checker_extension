@@ -343,7 +343,11 @@ function DailyReport(){
                 note: item.note || "-"
             }))
 
-            const shouldGroupByUser = !["Today", "Yesterday", "Custom"].includes(selectedFilter)
+            const isSingleDay =
+                startDate === endDate
+
+            const shouldGroupByUser =
+                !isSingleDay
 
             const displayData = shouldGroupByUser
                 ? groupReportsByUser(formattedData)
