@@ -1,3 +1,5 @@
+import { useState } from "react"
+
 function MonthlyTeamBattle({
     battleHistory,
     selectedMonth,
@@ -6,6 +8,7 @@ function MonthlyTeamBattle({
     setSelectedDay,
 }){
 
+    const [hoveredBattle, setHoveredBattle] = useState(null)
     const getBusinessDate = () => {
 
         const now = new Date()
@@ -34,12 +37,24 @@ function MonthlyTeamBattle({
         (_, index) => index + 1
     )
 
+    console.log('battlehistory', battleHistory)
+
+    const getWinner = (battle) => {
+        return typeof battle === "string"
+            ? battle
+            : battle?.winner
+    }
+
     const yuraWins = Object.values(battleHistory).filter(
-        (winner) => winner === "Yura"
+        (battle) =>
+            getWinner(battle) === "Yura" &&
+            battle?.type !== "weekly"
     ).length
 
     const strongWins = Object.values(battleHistory).filter(
-        (winner) => winner === "0xStrong"
+        (battle) =>
+            getWinner(battle) === "0xStrong" &&
+            battle?.type !== "weekly"
     ).length
 
     const currentBusinessDay = (() => {
@@ -53,13 +68,13 @@ function MonthlyTeamBattle({
     })()
 
     return(
-        <div className="bg-base-200 rounded-2xl p-3 shadow mb-6">
+        <div className="bg-base-200 rounded-2xl p-3 shadow mb-6 overflow-visible">
 
             <h4 className="font-bold text-xl mb-4">
                 Monthly Team Battle Result
             </h4>
 
-            <div className="w-full overflow-hidden">
+            <div className="w-full overflow-visible">
                 <table className="w-full table-fixed text-center">
 
                     <thead>
@@ -109,10 +124,24 @@ function MonthlyTeamBattle({
                             </td>
 
                             {days.map((day) => {
-                                const winner = battleHistory[day]
+                                const battle = battleHistory[day]
+                                const winner = typeof battle === "string" ? battle : battle?.winner
 
                                 return (
-                                    <td key={day} className="text-center">
+                                    <td
+                                        key={day}
+                                        className="relative text-center"
+                                        onMouseEnter={() =>
+                                            setHoveredBattle({
+                                                day,
+                                                team: "Yura",
+                                                battle
+                                            })
+                                        }
+                                        onMouseLeave={() =>
+                                            setHoveredBattle(null)
+                                        }
+                                    >
                                         {winner === "Yura" && (
                                             <span
                                                 className="
@@ -138,6 +167,66 @@ function MonthlyTeamBattle({
                                             >
                                                 💔
                                             </span>
+                                        )}
+                                        {hoveredBattle?.day === day &&
+                                            hoveredBattle?.team === "Yura" &&
+                                            battle && (
+                                            <div
+                                                className="
+                                                    absolute
+                                                    z-50
+                                                    left-1/2
+                                                    -translate-x-1/2
+                                                    top-full mt-2
+
+                                                    min-w-[210px]
+
+                                                    rounded-2xl
+                                                    border
+                                                    border-yellow-400/30
+
+                                                    bg-[#0f172a]/95
+                                                    backdrop-blur-md
+
+                                                    px-4
+                                                    py-3
+
+                                                    shadow-[0_0_30px_rgba(250,204,21,0.25)]
+
+                                                    text-xs
+                                                    text-white
+                                                "
+                                            >
+                                                <div className="font-bold text-yellow-300 mb-2 text-center">
+                                                    {battle.type === "weekly"
+                                                        ? "👑 Weekly Battle"
+                                                        : "⚔️ Daily Battle"}
+                                                </div>
+
+                                                <div className="flex justify-between">
+                                                    <span className="text-cyan-300">
+                                                        Yura
+                                                    </span>
+
+                                                    <span className="font-bold">
+                                                        {Number(
+                                                            battle.yuraScore
+                                                        ).toFixed(2)}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex justify-between mt-1">
+                                                    <span className="text-pink-300">
+                                                        0xStrong
+                                                    </span>
+
+                                                    <span className="font-bold">
+                                                        {Number(
+                                                            battle.strongScore
+                                                        ).toFixed(2)}
+                                                    </span>
+                                                </div>
+                                            </div>
                                         )}
                                         {(!winner || winner === "none" || winner === "draw") && (
                                             <span className="text-xs opacity-40">
@@ -159,10 +248,24 @@ function MonthlyTeamBattle({
                             </td>
 
                             {days.map((day) => {
-                                const winner = battleHistory[day]
+                                const battle = battleHistory[day]
+                                const winner = typeof battle === "string" ? battle : battle?.winner
 
                                 return (
-                                    <td key={day} className="text-center">
+                                    <td
+                                        key={day}
+                                        className="relative text-center"
+                                        onMouseEnter={() =>
+                                            setHoveredBattle({
+                                                day,
+                                                team: "0xStrong",
+                                                battle
+                                            })
+                                        }
+                                        onMouseLeave={() =>
+                                            setHoveredBattle(null)
+                                        }
+                                    >
                                         {winner === "0xStrong" && (
                                             <span
                                                 className="
@@ -188,6 +291,66 @@ function MonthlyTeamBattle({
                                             >
                                                 💔
                                             </span>
+                                        )}
+                                        {hoveredBattle?.day === day &&
+                                            hoveredBattle?.team === "0xStrong" &&
+                                            battle && (
+                                            <div
+                                                className="
+                                                    absolute
+                                                    z-50
+                                                    left-1/2
+                                                    -translate-x-1/2
+                                                    top-full mt-2
+
+                                                    min-w-[210px]
+
+                                                    rounded-2xl
+                                                    border
+                                                    border-yellow-400/30
+
+                                                    bg-[#0f172a]/95
+                                                    backdrop-blur-md
+
+                                                    px-4
+                                                    py-3
+
+                                                    shadow-[0_0_30px_rgba(250,204,21,0.25)]
+
+                                                    text-xs
+                                                    text-white
+                                                "
+                                            >
+                                                <div className="font-bold text-yellow-300 mb-2 text-center">
+                                                    {battle.type === "weekly"
+                                                        ? "👑 Weekly Battle"
+                                                        : "⚔️ Daily Battle"}
+                                                </div>
+
+                                                <div className="flex justify-between">
+                                                    <span className="text-cyan-300">
+                                                        Yura
+                                                    </span>
+
+                                                    <span className="font-bold">
+                                                        {Number(
+                                                            battle.yuraScore
+                                                        ).toFixed(2)}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex justify-between mt-1">
+                                                    <span className="text-pink-300">
+                                                        0xStrong
+                                                    </span>
+
+                                                    <span className="font-bold">
+                                                        {Number(
+                                                            battle.strongScore
+                                                        ).toFixed(2)}
+                                                    </span>
+                                                </div>
+                                            </div>
                                         )}
                                        {(!winner || winner === "none" || winner === "draw") && (
                                             <span className="text-xs opacity-40">

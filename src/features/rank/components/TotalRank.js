@@ -3,11 +3,52 @@ import { supabase } from "../../../app/supabaseClient"
 import MonthlyTeamBattle from "./MonthlyTeamBattle"
 
 function TotalRank(){
+    const getBusinessDate = () => {
+    
+        const now = new Date()
+    
+        const japanTime = new Date(
+            now.toLocaleString("en-US", {
+                timeZone: "Asia/Tokyo"
+            })
+        )
+    
+        if (japanTime.getHours() < 6) {
+            japanTime.setDate(japanTime.getDate() - 1)
+        }
+    
+        return japanTime.toLocaleDateString("en-CA")
+    }
 
     const [rankData, setRankData] = useState([])
     const [battleHistory, setBattleHistory] = useState({})
     const [rankLoading, setRankLoading] = useState(false)
-    const [selectedDay, setSelectedDay] = useState(null)
+
+    const getWeeklyRangeBySunday = (sundayDate) => {
+        const start = new Date(sundayDate)
+        start.setDate(sundayDate.getDate() - 6)
+
+        const end = new Date(sundayDate)
+        end.setDate(sundayDate.getDate() - 1)
+
+        return {
+            startDate: formatDate(start),
+            endDate: formatDate(end)
+        }
+    }
+
+    const getDefaultSelectedDay = () => {
+        const businessDate = getBusinessDate()
+        const date = new Date(`${businessDate}T00:00:00`)
+
+        date.setDate(date.getDate() - 1)
+
+        return date.getDate()
+    }
+
+    const [selectedDay, setSelectedDay] = useState(
+        getDefaultSelectedDay()
+    )
 
     const [selectedMonth, setSelectedMonth] = useState(
         new Date().getMonth()
@@ -66,22 +107,6 @@ function TotalRank(){
         }, 0)
     }
 
-    const getBusinessDate = () => {
-
-        const now = new Date()
-
-        const japanTime = new Date(
-            now.toLocaleString("en-US", {
-                timeZone: "Asia/Tokyo"
-            })
-        )
-
-        if (japanTime.getHours() < 6) {
-            japanTime.setDate(japanTime.getDate() - 1)
-        }
-
-        return japanTime.toLocaleDateString("en-CA")
-    }
 
     const getRankingDate = () => {
         const businessDate = getBusinessDate()
@@ -93,32 +118,101 @@ function TotalRank(){
     }
 
     const loadRankData = async () => {
+    
         setRankLoading(true)
+        let isWeeklyMode = false
+        let weekStartDate = null
+        let weekEndDate = null
 
         try {
             
             let rankingDate = getRankingDate()
     
             if (selectedDay) {
-    
+
                 const month = String(selectedMonth + 1).padStart(2, "0")
-    
+
                 const day = String(selectedDay).padStart(2, "0")
-    
+
                 rankingDate = `${selectedYear}-${month}-${day}`
+
+                const selectedDateObj = new Date(
+                    `${rankingDate}T00:00:00`
+                )
+
+                // Sunday = weekly mode
+                if (selectedDateObj.getDay() === 0) {
+
+                    isWeeklyMode = true
+
+                    const weeklyRange =
+                        getWeeklyRangeBySunday(selectedDateObj)
+
+                    weekStartDate = weeklyRange.startDate
+                    weekEndDate = weeklyRange.endDate
+                }
             }
     
-            const { data, error } = await supabase
+            let query = supabase
                 .from("daily_reports")
                 .select("*")
-                .eq("report_date", rankingDate)
+
+            if (isWeeklyMode) {
+                query = query
+                    .gte("report_date", weekStartDate)
+                    .lte("report_date", weekEndDate)
+            } else {
+                query = query.eq("report_date", rankingDate)
+            }
+
+            const { data, error } = await query
     
             if (error) {
                 console.error(error)
                 return
             }
+
+            let sourceData = data
+
+            if (isWeeklyMode) {
+                const groupedUsers = {}
+
+                data.forEach((item) => {
+                    const key = item.user_name
+
+                    if (!groupedUsers[key]) {
+                        groupedUsers[key] = {
+                            ...item,
+                            connect_count: 0,
+                            accept_count: 0,
+                            publish_count: 0,
+                            upload_count: 0,
+                            balance: 0,
+                            earning: 0,
+                            working_time: 0,
+                            active_account: 0,
+                            total_account: 0,
+                            lost_account: 0
+                        }
+                    }
+
+                    groupedUsers[key].connect_count += Number(item.connect_count || 0)
+                    groupedUsers[key].accept_count += Number(item.accept_count || 0)
+                    groupedUsers[key].publish_count += Number(item.publish_count || 0)
+                    groupedUsers[key].upload_count += Number(item.upload_count || 0)
+                    groupedUsers[key].balance += Number(item.balance || 0)
+                    groupedUsers[key].earning += Number(item.earning || 0)
+                    groupedUsers[key].working_time += Number(item.working_time || 0)
+                    groupedUsers[key].lost_account += Number(item.lost_account || 0)
+
+                    groupedUsers[key].active_account += Number(item.active_account || 0)
+                    groupedUsers[key].total_account += Number(item.total_account || 0)
+                })
+
+                sourceData = Object.values(groupedUsers)
+            }
             
-            const rankedData = data
+            const rankedData = sourceData
                 .map((item) => ({
                     ...item,
                     name: item.user_name,
@@ -138,28 +232,28 @@ function TotalRank(){
                 return
             }
 
-            const teamAUsers = rankedData.filter(user =>
-                teamA.includes(user.name)
-            )
+            // const teamAUsers = rankedData.filter(user =>
+            //     teamA.includes(user.name)
+            // )
     
-            const teamBUsers = rankedData.filter(user =>
-                teamB.includes(user.name)
-            )
+            // const teamBUsers = rankedData.filter(user =>
+            //     teamB.includes(user.name)
+            // )
     
-            const teamAScore = calculateTeamScore(teamAUsers)
-            const teamBScore = calculateTeamScore(teamBUsers)
+            // const teamAScore = calculateTeamScore(teamAUsers)
+            // const teamBScore = calculateTeamScore(teamBUsers)
     
-            const battleDate = Number(
-                rankingDate.split("-")[2]
-            )
+            // const battleDate = Number(
+            //     rankingDate.split("-")[2]
+            // )
     
-            setBattleHistory((prev) => ({
-                ...prev,
-                [battleDate]:
-                    teamAScore > teamBScore
-                        ? "Yura"
-                        : "0xStrong"
-            }))
+            // setBattleHistory((prev) => ({
+            //     ...prev,
+            //     [battleDate]:
+            //         teamAScore > teamBScore
+            //             ? "Yura"
+            //             : "0xStrong"
+            // }))
         } catch (error) {
             console.log(error)            
         } finally {
@@ -193,7 +287,6 @@ function TotalRank(){
             return
         }
 
-        console.log("monthly reports", data)
         const groupedByDate = {}
 
         data.forEach((item) => {
@@ -207,9 +300,9 @@ function TotalRank(){
             groupedByDate[date].push(item)
         })
 
-        console.log("groupedByDate", groupedByDate)
-
+        
         const monthlyHistory = {}
+        const weeklyScoreMap = {}
 
         Object.keys(groupedByDate).forEach((date) => {
 
@@ -234,17 +327,100 @@ function TotalRank(){
 
             const day = Number(date.split("-")[2])
 
+            const currentDate = new Date(date)
+            const dayOfWeek = currentDate.getDay()
+
+            // skip real Sunday daily data
+            if (dayOfWeek !== 0) {
+                const nextSunday = new Date(currentDate)
+                nextSunday.setDate(
+                    currentDate.getDate() + (7 - dayOfWeek)
+                )
+
+                if (
+                    nextSunday.getMonth() === selectedMonth &&
+                    nextSunday.getFullYear() === selectedYear
+                ) {
+                    const sundayDay = nextSunday.getDate()
+                    const weekKey = `${selectedYear}-${selectedMonth}-${sundayDay}`
+
+                    if (!weeklyScoreMap[weekKey]) {
+                        weeklyScoreMap[weekKey] = {
+                            sunday: sundayDay,
+                            yuraScore: 0,
+                            strongScore: 0
+                        }
+                    }
+
+                    weeklyScoreMap[weekKey].yuraScore += teamAScore
+                    weeklyScoreMap[weekKey].strongScore += teamBScore
+                }
+            }
             if (reportsOfDay.length === 0 || (teamAScore === 0 && teamBScore === 0)) {
-                monthlyHistory[day] = "none"
+                monthlyHistory[day] = {
+                    winner: "none",
+                    yuraScore: 0,
+                    strongScore: 0,
+                    type: "daily"
+                }
             } else if (teamAScore > teamBScore) {
-                monthlyHistory[day] = "Yura"
+                monthlyHistory[day] = {
+                    winner: "Yura",
+                    yuraScore: teamAScore,
+                    strongScore: teamBScore,
+                    type: "daily"
+                }
             } else if (teamBScore > teamAScore) {
-                monthlyHistory[day] = "0xStrong"
+                monthlyHistory[day] = {
+                    winner: "0xStrong",
+                    yuraScore: teamAScore,
+                    strongScore: teamBScore,
+                    type: "daily"
+                }
             } else {
-                monthlyHistory[day] = "draw"
+                monthlyHistory[day] = {
+                    winner: "draw",
+                    yuraScore: teamAScore,
+                    strongScore: teamBScore,
+                    type: "daily"
+                }
             }
         })
+        Object.values(weeklyScoreMap).forEach((week) => {
 
+            if (!week.sunday) return
+
+            if (week.yuraScore === 0 && week.strongScore === 0) {
+                monthlyHistory[week.sunday] = {
+                    winner: "none",
+                    yuraScore: 0,
+                    strongScore: 0,
+                    type: "weekly"
+                }
+            } else if (week.yuraScore > week.strongScore) {
+                monthlyHistory[week.sunday] = {
+                    winner: "Yura",
+                    yuraScore: week.yuraScore,
+                    strongScore: week.strongScore,
+                    type: "weekly"
+                }
+            } else if (week.strongScore > week.yuraScore) {
+                monthlyHistory[week.sunday] = {
+                    winner: "0xStrong",
+                    yuraScore: week.yuraScore,
+                    strongScore: week.strongScore,
+                    type: "weekly"
+                }
+            } else {
+                monthlyHistory[week.sunday] = {
+                    winner: "draw",
+                    yuraScore: week.yuraScore,
+                    strongScore: week.strongScore,
+                    type: "weekly"
+                }
+            }
+
+        })
         setBattleHistory(monthlyHistory)
     }
 
