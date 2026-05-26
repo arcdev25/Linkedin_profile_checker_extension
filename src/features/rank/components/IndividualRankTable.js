@@ -176,7 +176,7 @@ function IndividualRankTable({
 
             </div>
 
-            <div className="overflow-x-auto rounded-2xl border border-base-300">
+            <div className="overflow-x-auto overflow-y-visible rounded-2xl border border-base-300 pb-16">
                 <table className="w-full table-fixed text-center">
 
                     <thead className="bg-base-300/40">
@@ -263,16 +263,58 @@ function IndividualRankTable({
 
                                     {days.map((day) => {
                                         const rank = user.dailyRanks?.[day]
+                                        const score = user.dailyScores?.[day]
 
                                         return (
                                             <td
                                                 key={day}
-                                                className="py-3 text-base font-extrabold"
+                                                className="relative py-3 text-base font-extrabold group"
                                             >
                                                 {rank ? (
-                                                    <span className={getRankStyle(rank)}>
-                                                        {rank === 1 ? "👑" : `${rank}`}
-                                                    </span>
+                                                    <div className="relative inline-block">
+                                                        <span className={getRankStyle(rank)}>
+                                                            {rank === 1 && Number(score || 0) > 0
+                                                                ? "👑"
+                                                                : Number(score || 0) <= 0
+                                                                    ? "☠️"
+                                                                : `${rank}`
+                                                            }
+                                                        </span>
+
+                                                        <div
+                                                            className="
+                                                                absolute
+                                                                z-50
+                                                                left-1/2
+                                                                -translate-x-1/2
+                                                                bottom-full
+                                                                mb-2
+
+                                                                hidden
+                                                                group-hover:block
+
+                                                                min-w-[150px]
+                                                                rounded-xl
+                                                                border
+                                                                border-yellow-400/30
+                                                                bg-[#0f172a]
+                                                                px-3
+                                                                py-2
+                                                                shadow-[0_0_25px_rgba(250,204,21,0.25)]
+
+                                                                text-xs
+                                                                text-white
+                                                            "
+                                                        >
+                                                            <div className="text-yellow-300 font-bold mb-1">
+                                                                Score
+                                                            </div>
+
+                                                            <div className="font-black">
+                                                                {Number(score || 0).toFixed(2)}
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 ) : (
                                                     <span className="opacity-30">
                                                         -

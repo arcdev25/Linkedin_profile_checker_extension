@@ -37,8 +37,6 @@ function MonthlyTeamBattle({
         (_, index) => index + 1
     )
 
-    console.log('battlehistory', battleHistory)
-
     const getWinner = (battle) => {
         return typeof battle === "string"
             ? battle
@@ -152,7 +150,7 @@ function MonthlyTeamBattle({
                                                     drop-shadow-[0_0_6px_#ffd700]
                                                 "
                                             >
-                                                👑
+                                                {battle?.type === "weekly" ? "🏆" : "👑"}
                                             </span>
                                         )}
                                         {winner === "0xStrong" && (
@@ -165,7 +163,7 @@ function MonthlyTeamBattle({
                                                     drop-shadow-[0_0_6px_#ff3366]
                                                 "
                                             >
-                                                💔
+                                                {battle?.type === "weekly" ? "☠️" : "💔"}
                                             </span>
                                         )}
                                         {hoveredBattle?.day === day &&
@@ -276,7 +274,7 @@ function MonthlyTeamBattle({
                                                     drop-shadow-[0_0_6px_#ffd700]
                                                 "
                                             >
-                                                👑
+                                                {battle?.type === "weekly" ? "🏆" : "👑"}
                                             </span>
                                         )}
                                         {winner === "Yura" && (
@@ -289,7 +287,7 @@ function MonthlyTeamBattle({
                                                     drop-shadow-[0_0_6px_#ff3366]
                                                 "
                                             >
-                                                💔
+                                                {battle?.type === "weekly" ? "☠️" : "💔"}
                                             </span>
                                         )}
                                         {hoveredBattle?.day === day &&

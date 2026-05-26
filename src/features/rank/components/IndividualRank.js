@@ -44,22 +44,22 @@ function IndividualRank() {
         switch(metric){
 
             case "connect":
-                return Number(item.connect_count || 0)
+                return Number(item.connect_count || 0) * 2
 
             case "upload":
-                return Number(item.upload_count || 0)
+                return Number(item.upload_count || 0) * 15
 
             case "earning":
-                return Number(item.earning || 0)
+                return Number(item.earning || 0) * 30
 
             case "workingTime":
-                return Number(item.working_time || 0)
+                return Number(item.working_time || 0) * 5
 
             case "totalAccount":
-                return Number(item.total_account || 0)
+                return Number(item.total_account || 0) * 5
 
             case "activeAccount":
-                return Number(item.active_account || 0)
+                return Number(item.active_account || 0) * 10
 
             case "total":
             default:
@@ -142,6 +142,9 @@ function IndividualRank() {
                         score: calculateMetricScore(item, activeMetric)
                     }))
                     .sort((a, b) => b.score - a.score)
+                    
+                let previousScore = null
+                let previousRank = 0
 
                 rankedReports.forEach((user, index) => {
 
@@ -151,17 +154,31 @@ function IndividualRank() {
                             avatar: avatarMap[user.name],
                             score: 0,
                             mvpCount: 0,
-                            dailyRanks: {}
+                            dailyRanks: {},
+                            dailyScores: {}
                         }
                     }
 
                     const day = Number(date.split("-")[2])
-                    const rank = index + 1
+                    
+                    const currentScore = Number(user.score || 0)
+
+                    const rank =
+                        currentScore === previousScore
+                            ? previousRank
+                            : index + 1
+
+                    previousScore = currentScore
+                    previousRank = rank
 
                     userRankMap[user.name].dailyRanks[day] = rank
+                    userRankMap[user.name].dailyScores[day] = Number(user.score || 0)
                     userRankMap[user.name].score += Number(user.score || 0)
 
-                    if (rank === 1) {
+                    if (
+                        rank === 1 &&
+                        Number(user.score || 0) > 0
+                    ) {
                         userRankMap[user.name].mvpCount += 1
                     }
 
@@ -184,6 +201,7 @@ function IndividualRank() {
                     score: 0,
                     mvpCount: 0,
                     dailyRanks: {},
+                    dailyScores: {},
                     level: 50 - index
                 }
             })
