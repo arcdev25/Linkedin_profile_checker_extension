@@ -25,14 +25,14 @@ function ReportTable({
                         {showUserColumns && <th>No</th>}
                         {showUserColumns && <th>User</th>}
                         <th>Connect * 2</th>
-                        <th>Accept * 5</th>
-                        <th>Publish * 8</th>
-                        <th>Upload * 15</th>
+                        <th>Accept * 4</th>
+                        <th>Publish * 5</th>
+                        <th>Upload * 10</th>
                         <th>Balance * 20</th>
-                        <th>Earning * 30</th>
+                        <th>Earning * 50</th>
                         <th>Working Time * 5</th>
-                        <th>Total Account * 5</th>
-                        <th>Active Account * 10</th>
+                        <th>Total Account * 2</th>
+                        <th>Active Account * 2</th>
                         <th>Lost Account * -10</th>
                         <th>Note</th>
                     </tr>

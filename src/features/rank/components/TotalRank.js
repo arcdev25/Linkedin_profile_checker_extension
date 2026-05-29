@@ -88,14 +88,14 @@ function TotalRank(){
 
         return (
             Number(item.connect_count || 0) * 2 +
-            Number(item.accept_count || 0) * 5 +
-            Number(item.publish_count || 0) * 8 +
-            Number(item.upload_count || 0) * 15 +
+            Number(item.accept_count || 0) * 4 +
+            Number(item.publish_count || 0) * 5 +
+            Number(item.upload_count || 0) * 10 +
             Number(item.balance || 0) * 20 +
-            Number(item.earning || 0) * 30 +
+            Number(item.earning || 0) * 50 +
             Number(item.working_time || 0) * 5 +
-            Number(item.active_account || 0) * 10 +
-            Number(item.total_account || 0) * 5 -
+            Number(item.active_account || 0) * 2 +
+            Number(item.total_account || 0) * 2 -
             Number(item.lost_account || 0) * 10
         )
     }
