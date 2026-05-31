@@ -87,40 +87,51 @@ export const getDashboardStats = createAsyncThunk('/dashboard/stats', async (par
         return query
     }
 
-    // Query 1: Total Profiles + Pending — filtered by contacted_at (created date)
-    let createdQuery = supabase
-        .from('contacts')
-        .select('*, profiles(*), recruiters(name, company)')
-
-    createdQuery = applyOwnerFilter(createdQuery)
-
-    if (startDate && endDate) {
-        createdQuery = createdQuery
-            .gte('contacted_at', getTimezoneStartIso(startDate))
-            .lte('contacted_at', getTimezoneEndIso(endDate))
+    // Fetch ALL rows for a query by paginating through in chunks of 1000
+    const fetchAll = async (buildQuery) => {
+        const PAGE_SIZE = 1000
+        let allRows = []
+        let from = 0
+        while (true) {
+            const q = buildQuery().range(from, from + PAGE_SIZE - 1)
+            const { data, error } = await q
+            if (error) throw error
+            allRows = allRows.concat(data || [])
+            if (!data || data.length < PAGE_SIZE) break
+            from += PAGE_SIZE
+        }
+        return allRows
     }
 
-    const createdResult = await createdQuery
-    if (createdResult.error) throw createdResult.error
-    const createdContacts = createdResult.data
+    // Query 1: Total Profiles + Pending — filtered by contacted_at (created date)
+    // Only select the minimal fields needed — no heavy profile/recruiter joins
+    const createdContacts = await fetchAll(() => {
+        let q = supabase
+            .from('contacts')
+            .select('id, status, contacted_at, updated_at, recruiter_id, owner_id')
+        q = applyOwnerFilter(q)
+        if (startDate && endDate) {
+            q = q
+                .gte('contacted_at', getTimezoneStartIso(startDate))
+                .lte('contacted_at', getTimezoneEndIso(endDate))
+        }
+        return q
+    })
 
     // Query 2: Accept, Chatting, Not Interested, Failed, Success — filtered by updated_at
-    let updatedQuery = supabase
-        .from('contacts')
-        .select('*, profiles(*), recruiters(name, company)')
-        .not('status', 'eq', 'pending')
-
-    updatedQuery = applyOwnerFilter(updatedQuery)
-
-    if (startDate && endDate) {
-        updatedQuery = updatedQuery
-            .gte('updated_at', getTimezoneStartIso(startDate))
-            .lte('updated_at', getTimezoneEndIso(endDate))
-    }
-
-    const updatedResult = await updatedQuery
-    if (updatedResult.error) throw updatedResult.error
-    const updatedContacts = updatedResult.data
+    const updatedContacts = await fetchAll(() => {
+        let q = supabase
+            .from('contacts')
+            .select('id, status, contacted_at, updated_at, recruiter_id, owner_id')
+            .not('status', 'eq', 'pending')
+        q = applyOwnerFilter(q)
+        if (startDate && endDate) {
+            q = q
+                .gte('updated_at', getTimezoneStartIso(startDate))
+                .lte('updated_at', getTimezoneEndIso(endDate))
+        }
+        return q
+    })
 
     // For each non-pending status, split into:
     //   - "new": contacted_at is within the selected date range (contacted and updated in range)
@@ -154,13 +165,10 @@ export const getDashboardStats = createAsyncThunk('/dashboard/stats', async (par
         }, {})
     }
 
-    // Use createdContacts as the base for total profiles and recruiter stats
-    const contacts = createdContacts
-
-    // Calculate recruiter performance
+    // Calculate recruiter performance — count contacts per recruiter_id
     const recruiterStats = recruiters.map(recruiter => {
-        const recruiterContacts = contacts.filter(c => c.recruiter_id === recruiter.id)
-        const successCount = recruiterContacts.filter(c => c.status === 'success').length
+        const recruiterContacts = createdContacts.filter(c => c.recruiter_id === recruiter.id)
+        const successCount = updatedContacts.filter(c => c.recruiter_id === recruiter.id && c.status === 'success').length
         const conversionRate = recruiterContacts.length > 0 
             ? ((successCount / recruiterContacts.length) * 100).toFixed(1)
             : 0
@@ -194,16 +202,14 @@ export const getDashboardStats = createAsyncThunk('/dashboard/stats', async (par
     })
 
     return {
-        totalProfiles: contacts.length,
-        totalContacts: contacts.length,
+        totalProfiles: createdContacts.length,
+        totalContacts: createdContacts.length,
         totalRecruiters: recruiters.length,
         statusCounts,
         statusBreakdown,
         recruiterStats,
         dailyStats,
-        recentContacts: contacts
-            .sort((a, b) => new Date(b.contacted_at) - new Date(a.contacted_at))
-            .slice(0, 10)
+        recentContacts: []
     }
 })
 
