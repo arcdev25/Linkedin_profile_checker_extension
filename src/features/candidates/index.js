@@ -133,23 +133,20 @@ function Candidates() {
         dispatch(openModal({ title: "Add New Candidate", bodyType: MODAL_BODY_TYPES.CANDIDATE_ADD_NEW }))
     }
 
-    const deleteCurrentCandidate = (id) => {
+    const deleteCurrentCandidate = (candidate) => {
+        const isReconnection = activeTab === 'reconnection'
         dispatch(openModal({
             title: "Confirmation",
             bodyType: MODAL_BODY_TYPES.CONFIRMATION,
             extraObject: {
-                message: "Are you sure you want to delete this candidate?",
-                type: CONFIRMATION_MODAL_CLOSE_TYPES.CANDIDATE_DELETE,
-                id
+                message: isReconnection
+                    ? "Remove this candidate from the reconnection list? The profile will remain in the main list."
+                    : "Are you sure you want to delete this candidate?",
+                type: isReconnection
+                    ? CONFIRMATION_MODAL_CLOSE_TYPES.RECONNECTION_CONTACT_DELETE
+                    : CONFIRMATION_MODAL_CLOSE_TYPES.CANDIDATE_DELETE,
+                id: isReconnection ? candidate.contactId : candidate.id
             }
-        }))
-    }
-
-    const reconnectCandidate = (candidate) => {
-        dispatch(openModal({
-            title: "Reconnect Candidate",
-            bodyType: MODAL_BODY_TYPES.CANDIDATE_RECONNECT,
-            extraObject: { candidate }
         }))
     }
 
@@ -211,7 +208,7 @@ function Candidates() {
                                 <th>Status</th>
                                 <th>Company</th>
                                 <th>Last Contact</th>
-                                <th>{activeTab === 'reconnection' ? 'Actions' : ''}</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -255,20 +252,9 @@ function Candidates() {
                                             <td>{candidate.recruiterName}</td>
                                             <td>{moment(candidate.lastContactDate).format("DD MMM YY")}</td>
                                             <td>
-                                                {activeTab === 'reconnection' ? (
-                                                    <div className="flex gap-2">
-                                                        <button className="btn btn-sm btn-primary" onClick={() => reconnectCandidate(candidate)}>
-                                                            Reconnect
-                                                        </button>
-                                                        <button className="btn btn-square btn-sm btn-ghost" onClick={() => deleteCurrentCandidate(candidate.id)}>
-                                                            <TrashIcon className="w-5"/>
-                                                        </button>
-                                                    </div>
-                                                ) : (
-                                                    <button className="btn btn-square btn-ghost" onClick={() => deleteCurrentCandidate(candidate.id)}>
-                                                        <TrashIcon className="w-5"/>
-                                                    </button>
-                                                )}
+                                                <button className="btn btn-square btn-ghost btn-sm" onClick={() => deleteCurrentCandidate(candidate)}>
+                                                    <TrashIcon className="w-5"/>
+                                                </button>
                                             </td>
                                         </tr>
                                     )

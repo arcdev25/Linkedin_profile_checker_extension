@@ -34,7 +34,14 @@ export const getNeedReconnectionCandidates = createAsyncThunk('/candidates/needR
                 notes,
                 contacted_at,
                 recruiter_id,
-                owner_id
+                owner_id,
+                recruiters (
+                    id,
+                    name,
+                    company,
+                    deleted_at,
+                    deleted_name
+                )
             )
         `, { count: 'exact' })
         .eq('contacts.status', 'need reconnection')
@@ -59,11 +66,20 @@ export const getNeedReconnectionCandidates = createAsyncThunk('/candidates/needR
         const contact = Array.isArray(profile.contacts)
             ? profile.contacts.sort((a, b) => new Date(b.contacted_at) - new Date(a.contacted_at))[0]
             : profile.contacts
+
+        const recruiter = contact?.recruiters
+        // Use company for display; fall back to deleted_name if soft-deleted, then 'N/A'
+        const recruiterName = recruiter
+            ? (recruiter.deleted_at
+                ? `${recruiter.company || recruiter.deleted_name || 'Deleted'} (deleted)`
+                : (recruiter.company || recruiter.name || 'N/A'))
+            : 'N/A'
+
         return {
             ...profile,
             status: contact?.status || 'need reconnection',
             lastContactDate: contact?.contacted_at || profile.created_at,
-            recruiterName: 'N/A',
+            recruiterName,
             notes: contact?.notes || '',
             contactId: contact?.id || null,
             recruiterId: contact?.recruiter_id,
@@ -220,6 +236,34 @@ export const deleteCandidateFromDb = createAsyncThunk('/candidates/delete', asyn
     return id
 })
 
+// Delete only the specific contact row (used from Need Reconnection tab)
+// This does NOT delete the profile, so the candidate stays in the main list
+export const deleteReconnectionContact = createAsyncThunk('/candidates/deleteReconnectionContact', async (contactId, { getState }) => {
+    const { auth } = getState()
+    const user = auth.user
+
+    // Verify ownership for owners
+    if (user?.role === 'owner') {
+        const { data: contact } = await supabase
+            .from('contacts')
+            .select('owner_id')
+            .eq('id', contactId)
+            .single()
+
+        if (contact?.owner_id !== user.id) {
+            throw new Error('You can only delete your own contacts')
+        }
+    }
+
+    const { error } = await supabase
+        .from('contacts')
+        .delete()
+        .eq('id', contactId)
+
+    if (error) throw error
+    return contactId
+})
+
 export const updateContactStatus = createAsyncThunk('/candidates/updateContact', async ({ contactId, newStatus, recruiterId }) => {
     const { data, error } = await supabase
         .from('contacts')
@@ -278,6 +322,11 @@ export const candidatesSlice = createSlice({
             .addCase(deleteCandidateFromDb.fulfilled, (state, action) => {
                 state.candidates      = state.candidates.filter(c => c.id !== action.payload)
                 state.needReconnection = state.needReconnection.filter(c => c.id !== action.payload)
+            })
+            .addCase(deleteReconnectionContact.fulfilled, (state, action) => {
+                // Remove only from the reconnection list by contactId — main candidates untouched
+                state.needReconnection = state.needReconnection.filter(c => c.contactId !== action.payload)
+                state.needReconnectionTotalCount = Math.max(0, state.needReconnectionTotalCount - 1)
             })
     }
 })

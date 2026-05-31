@@ -10,16 +10,19 @@ import PencilIcon from '@heroicons/react/24/outline/PencilIcon'
 import Pagination from "../../components/Pagination/Pagination"
 import { setSelectedOwner, getAllOwners } from "./accountSlice"
 
-const TopSideButtons = () => {
-    const dispatch = useDispatch()
-
-    const openAddNewAccountModal = () => {
-        dispatch(openModal({title : "Add New Recruiter", bodyType : MODAL_BODY_TYPES.ACCOUNT_ADD_NEW}))
-    }
-
-    return(
-        <div className="inline-block float-right">
-            <button className="btn px-6 btn-sm normal-case btn-primary" onClick={() => openAddNewAccountModal()}>Add New</button>
+const TopSideButtons = ({ searchText, setSearchText, openAddModal }) => {
+    return (
+        <div className="flex items-center gap-2 justify-end">
+            <input
+                type="text"
+                placeholder="Search name, email, company…"
+                value={searchText}
+                onChange={e => setSearchText(e.target.value)}
+                className="input input-bordered input-sm w-56"
+            />
+            <button className="btn px-6 btn-sm normal-case btn-primary" onClick={openAddModal}>
+                Add New
+            </button>
         </div>
     )
 }
@@ -30,16 +33,23 @@ function Accounts(){
     const isAdmin = user?.role === 'admin'
     const dispatch = useDispatch()
     const [currentPage, setCurrentPage] = useState(1)
+    const [searchText, setSearchText] = useState("")
     const itemsPerPage = 10
+
+    // Reset to page 1 when search changes
+    useEffect(() => { setCurrentPage(1) }, [searchText, selectedOwnerId])
+
     useEffect(() => {
-             // Load owners list if admin
-             if (isAdmin) {
-                 dispatch(getAllOwners())
-             }
-         }, [dispatch, isAdmin])
+        dispatch(getAllOwners())
+    }, [dispatch])
+
     useEffect(() => {
-        dispatch(getAccountsContent({ page: currentPage, limit: itemsPerPage, ownerId: selectedOwnerId}))
-    }, [dispatch, selectedOwnerId, currentPage])
+        dispatch(getAccountsContent({ page: currentPage, limit: itemsPerPage, ownerId: selectedOwnerId, searchTerm: searchText }))
+    }, [dispatch, selectedOwnerId, currentPage, searchText])
+    const openAddNewAccountModal = () => {
+        dispatch(openModal({title : "Add New Recruiter", bodyType : MODAL_BODY_TYPES.ACCOUNT_ADD_NEW}))
+    }
+
     const handleOwnerTabClick = (ownerId) => {
             dispatch(setSelectedOwner(ownerId))
         }
@@ -93,7 +103,13 @@ function Accounts(){
                     </div>
                 </div>
             )}
-            <TitleCard title="Recruiters" totalCount={totalCount} topMargin="mt-2" TopSideButtons={<TopSideButtons />}>
+            <TitleCard title="Recruiters" totalCount={totalCount} topMargin="mt-2" TopSideButtons={
+                <TopSideButtons
+                    searchText={searchText}
+                    setSearchText={setSearchText}
+                    openAddModal={openAddNewAccountModal}
+                />
+            }>
                 <div className="overflow-x-auto w-full">
                     <table className="table w-full">
                         <thead>

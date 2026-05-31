@@ -8,6 +8,7 @@ export const getAccountsContent = createAsyncThunk('/accounts/content', async (p
     const page = params?.page || 1
     const limit = params?.limit || 10
     const ownerId = params?.ownerId
+    const searchTerm = params?.searchTerm || ''
     const offset = (page - 1) * limit
     const isAdmin = user?.role === 'admin'
     // Determine which owner's data to fetch. Admins can pass null for all owners.
@@ -21,17 +22,23 @@ export const getAccountsContent = createAsyncThunk('/accounts/content', async (p
     let query = supabase
         .from('recruiters')
         .select('*', { count: 'exact' })
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1)
-    
+
     if (targetOwnerId) {
         query = query.eq('owner_id', targetOwnerId)
-    }    
-    // If user is owner (not admin), filter by owner_id
+    }
     if (user?.role === 'owner') {
         query = query.eq('owner_id', user.id)
     }
-    // Admin sees all recruiters
+
+    // Search by name, email, or company
+    if (searchTerm) {
+        query = query.or(
+            `name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,company.ilike.%${searchTerm}%`
+        )
+    }
     
     const { data, error, count } = await query
     
@@ -102,11 +109,13 @@ export const deleteAccountFromDb = createAsyncThunk('/accounts/delete', async (i
     const user = auth.user
 
     // Get recruiter info before deleting
-    const { data: recruiter } = await supabase
+    const { data: recruiter, error: fetchError } = await supabase
         .from('recruiters')
-        .select('owner_id')
+        .select('owner_id, name')
         .eq('id', id)
         .single()
+
+    if (fetchError) throw fetchError
 
     // Verify ownership before delete (for owners)
     if (user?.role === 'owner') {
@@ -115,35 +124,34 @@ export const deleteAccountFromDb = createAsyncThunk('/accounts/delete', async (i
         }
     }
 
-    // Update ALL contacts for this recruiter to preserve owner_id
-    // This includes both "need reconnection" and "failed" candidates
-    const { error: updateError } = await supabase
+    // Preserve owner_id on all contacts for this recruiter
+    const { error: ownerError } = await supabase
         .from('contacts')
-        .update({ 
-            owner_id: recruiter?.owner_id // Preserve owner_id for all contacts
-        })
+        .update({ owner_id: recruiter?.owner_id })
         .eq('recruiter_id', id)
-    
-    if (updateError) throw updateError
 
-    // Update non-failed contacts to "need reconnection"
+    if (ownerError) throw ownerError
+
+    // Move non-failed contacts to "need reconnection"
     const { error: statusError } = await supabase
         .from('contacts')
-        .update({ 
-            status: 'need reconnection'
-        })
+        .update({ status: 'need reconnection' })
         .eq('recruiter_id', id)
-        .neq('status', 'failed') // Don't change failed candidates' status
-    
+        .neq('status', 'failed')
+
     if (statusError) throw statusError
 
-    // Now delete the recruiter
-    const { error } = await supabase
+    // Soft delete: stamp deleted_at and preserve the name for display
+    const { error: softDeleteError } = await supabase
         .from('recruiters')
-        .delete()
+        .update({
+            deleted_at:   new Date().toISOString(),
+            deleted_name: recruiter?.name || 'Deleted Recruiter'
+        })
         .eq('id', id)
-    
-    if (error) throw error
+
+    if (softDeleteError) throw softDeleteError
+
     return id
 })
 
