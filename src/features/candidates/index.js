@@ -2,9 +2,10 @@ import moment from "moment"
 import { useEffect, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import TitleCard from "../../components/Cards/TitleCard"
-import { getCandidatesContent, getNeedReconnectionCandidates } from "./candidatesSlice"
+import { getCandidatesContent, getNeedReconnectionCandidates, downloadCandidatesCSV } from "./candidatesSlice"
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import TrashIcon from '@heroicons/react/24/outline/TrashIcon'
+import ArrowDownTrayIcon from '@heroicons/react/24/outline/ArrowDownTrayIcon'
 import { openModal } from "../common/modalSlice"
 import { CONFIRMATION_MODAL_CLOSE_TYPES, MODAL_BODY_TYPES } from '../../utils/globalConstantUtil'
 import Pagination from "../../components/Pagination/Pagination"
@@ -14,22 +15,33 @@ const STATUS_OPTIONS = ["pending", "chatting", "sent js", "not interested", "suc
 const TopSideButtons = ({
     activeTab,
     searchText, setSearchText,
+    noteSearch, setNoteSearch,
     statusFilter, setStatusFilter,
     companyFilter, setCompanyFilter,
-    openAddModal,
-    onClearAll
+    onClearAll,
+    onDownload,
+    downloading
 }) => {
-    const hasFilter = statusFilter || companyFilter || searchText
+    const hasFilter = statusFilter || companyFilter || searchText || noteSearch
 
     return (
         <div className="flex flex-wrap items-center gap-2 justify-end">
-            {/* Search */}
+            {/* Profile search */}
             <input
                 type="text"
-                placeholder="Search name, headline, LinkedIn URL…"
+                placeholder="Search name, headline, URL…"
                 value={searchText}
                 onChange={e => setSearchText(e.target.value)}
-                className="input input-bordered input-sm w-56"
+                className="input input-bordered input-sm w-48"
+            />
+
+            {/* Note search */}
+            <input
+                type="text"
+                placeholder="Search notes…"
+                value={noteSearch}
+                onChange={e => setNoteSearch(e.target.value)}
+                className="input input-bordered input-sm w-36"
             />
 
             {/* Company filter */}
@@ -38,7 +50,7 @@ const TopSideButtons = ({
                 placeholder="Filter by company…"
                 value={companyFilter}
                 onChange={e => setCompanyFilter(e.target.value)}
-                className="input input-bordered input-sm w-40"
+                className="input input-bordered input-sm w-36"
             />
 
             {/* Status filter — main tab only */}
@@ -66,15 +78,19 @@ const TopSideButtons = ({
                 </button>
             )}
 
-            {/* Add New — main tab only */}
-            {activeTab === 'main' && (
-                <button
-                    className="btn px-6 btn-sm normal-case btn-primary"
-                    onClick={openAddModal}
-                >
-                    Add New
-                </button>
-            )}
+            {/* Download CSV */}
+            <button
+                onClick={onDownload}
+                disabled={downloading}
+                className="btn btn-sm btn-outline normal-case gap-1"
+                title="Download CSV"
+            >
+                {downloading
+                    ? <span className="loading loading-spinner loading-xs"/>
+                    : <ArrowDownTrayIcon className="w-4 h-4"/>
+                }
+                {downloading ? 'Exporting…' : 'CSV'}
+            </button>
         </div>
     )
 }
@@ -85,12 +101,14 @@ function Candidates() {
     const [activeTab,      setActiveTab]      = useState('main')
     const [currentPage,    setCurrentPage]    = useState(1)
     const [searchText,     setSearchText]     = useState("")
+    const [noteSearch,     setNoteSearch]     = useState("")
     const [statusFilter,   setStatusFilter]   = useState("")
     const [companyFilter,  setCompanyFilter]  = useState("")
+    const [downloading,    setDownloading]    = useState(false)
     const itemsPerPage = 10
 
     // Reset page whenever any filter changes
-    useEffect(() => { setCurrentPage(1) }, [searchText, statusFilter, companyFilter, activeTab])
+    useEffect(() => { setCurrentPage(1) }, [searchText, noteSearch, statusFilter, companyFilter, activeTab])
 
     useEffect(() => {
         if (activeTab === 'main') {
@@ -98,6 +116,7 @@ function Candidates() {
                 page: currentPage,
                 limit: itemsPerPage,
                 searchTerm: searchText,
+                noteSearch,
                 statusFilter,
                 companyFilter
             }))
@@ -105,10 +124,11 @@ function Candidates() {
             dispatch(getNeedReconnectionCandidates({
                 page: currentPage,
                 limit: itemsPerPage,
-                searchTerm: searchText
+                searchTerm: searchText,
+                noteSearch
             }))
         }
-    }, [dispatch, currentPage, activeTab, searchText, statusFilter, companyFilter])
+    }, [dispatch, currentPage, activeTab, searchText, noteSearch, statusFilter, companyFilter])
 
     const currentData       = activeTab === 'main' ? candidates : needReconnection
     const currentTotalCount = activeTab === 'main' ? totalCount : needReconnectionTotalCount
@@ -118,19 +138,58 @@ function Candidates() {
         setActiveTab(tab)
         setCurrentPage(1)
         setSearchText("")
+        setNoteSearch("")
         setStatusFilter("")
         setCompanyFilter("")
     }
 
     const clearAll = () => {
         setSearchText("")
+        setNoteSearch("")
         setStatusFilter("")
         setCompanyFilter("")
         setCurrentPage(1)
     }
 
-    const openAddNewCandidateModal = () => {
-        dispatch(openModal({ title: "Add New Candidate", bodyType: MODAL_BODY_TYPES.CANDIDATE_ADD_NEW }))
+    const handleDownload = async () => {
+        setDownloading(true)
+        try {
+            const rows = await dispatch(downloadCandidatesCSV({
+                searchTerm: searchText,
+                noteSearch,
+                statusFilter,
+                companyFilter,
+                activeTab
+            })).unwrap()
+
+            if (!rows || rows.length === 0) {
+                alert('No data to export.')
+                return
+            }
+
+            // Build CSV
+            const headers = ['Name', 'Headline', 'LinkedIn URL', 'Country', 'Status', 'Company', 'Notes', 'Last Contact']
+            const keys    = ['name', 'headline', 'profile_url', 'country', 'status', 'company', 'notes', 'last_contact']
+
+            const escape = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`
+
+            const csvContent = [
+                headers.join(','),
+                ...rows.map(row => keys.map(k => escape(row[k])).join(','))
+            ].join('\n')
+
+            const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
+            const url  = URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href     = url
+            link.download = `candidates_${activeTab}_${moment().format('YYYYMMDD_HHmm')}.csv`
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            URL.revokeObjectURL(url)
+        } finally {
+            setDownloading(false)
+        }
     }
 
     const deleteCurrentCandidate = (candidate) => {
@@ -190,11 +249,13 @@ function Candidates() {
                 TopSideButtons={
                     <TopSideButtons
                         activeTab={activeTab}
-                        searchText={searchText}     setSearchText={setSearchText}
-                        statusFilter={statusFilter} setStatusFilter={setStatusFilter}
+                        searchText={searchText}       setSearchText={setSearchText}
+                        noteSearch={noteSearch}       setNoteSearch={setNoteSearch}
+                        statusFilter={statusFilter}   setStatusFilter={setStatusFilter}
                         companyFilter={companyFilter} setCompanyFilter={setCompanyFilter}
-                        openAddModal={openAddNewCandidateModal}
                         onClearAll={clearAll}
+                        onDownload={handleDownload}
+                        downloading={downloading}
                     />
                 }
             >

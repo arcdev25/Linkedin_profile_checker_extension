@@ -17,13 +17,51 @@ function DashboardStats({ title, icon, value, description, colorIndex, tooltip }
         if (!cardRef.current) return
         const rect = cardRef.current.getBoundingClientRect()
         setPos({
-            top: rect.top + window.scrollY - 8,   // above the card
+            top: rect.top + window.scrollY - 8,
             left: rect.left + rect.width / 2
         })
         setVisible(true)
     }
 
     const handleMouseLeave = () => setVisible(false)
+
+    const renderTooltipContent = () => {
+        // Date tooltip — for Total Profiles (last contact date)
+        if (tooltip.type === 'date') {
+            return (
+                <>
+                    <p className="font-bold text-base-content mb-2 border-b border-base-content/10 pb-1">
+                        {title}
+                    </p>
+                    <div className="flex justify-between items-center">
+                        <span className="text-base-content/70">Last contact</span>
+                        <span className="font-bold text-primary ml-3">
+                            {tooltip.date
+                                ? new Date(tooltip.date).toLocaleString(undefined, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })
+                                : 'N/A'}
+                        </span>
+                    </div>
+                </>
+            )
+        }
+
+        // Breakdown tooltip — for Accept, Chatting, etc.
+        return (
+            <>
+                <p className="font-bold text-base-content mb-2 border-b border-base-content/10 pb-1">
+                    {title} breakdown
+                </p>
+                <div className="flex justify-between items-center mb-1">
+                    <span className="text-base-content/70">Contacted today</span>
+                    <span className="font-bold text-primary">{tooltip.new}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                    <span className="text-base-content/70">Contacted past</span>
+                    <span className="font-bold text-secondary">{tooltip.past}</span>
+                </div>
+            </>
+        )
+    }
 
     return (
         <>
@@ -51,17 +89,7 @@ function DashboardStats({ title, icon, value, description, colorIndex, tooltip }
                     }}
                 >
                     <div className="bg-base-300 border border-base-content/20 rounded-xl shadow-xl p-3 text-sm w-56">
-                        <p className="font-bold text-base-content mb-2 border-b border-base-content/10 pb-1">
-                            {title} breakdown
-                        </p>
-                        <div className="flex justify-between items-center mb-1">
-                            <span className="text-base-content/70">Contacted today</span>
-                            <span className="font-bold text-primary">{tooltip.new}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                            <span className="text-base-content/70">Contacted past</span>
-                            <span className="font-bold text-secondary">{tooltip.past}</span>
-                        </div>
+                        {renderTooltipContent()}
                     </div>
                     {/* Arrow */}
                     <div className="w-3 h-3 bg-base-300 border-r border-b border-base-content/20 rotate-45 mx-auto -mt-1.5" />

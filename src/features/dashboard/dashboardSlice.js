@@ -201,10 +201,18 @@ export const getDashboardStats = createAsyncThunk('/dashboard/stats', async (par
         }
     })
 
+    // Last contact date = the most recent contacted_at among all createdContacts
+    const lastContactDate = createdContacts.length > 0
+        ? createdContacts.reduce((latest, c) =>
+            c.contacted_at > latest ? c.contacted_at : latest,
+            createdContacts[0].contacted_at)
+        : null
+
     return {
         totalProfiles: createdContacts.length,
         totalContacts: createdContacts.length,
         totalRecruiters: recruiters.length,
+        lastContactDate,
         statusCounts,
         statusBreakdown,
         recruiterStats,
@@ -233,6 +241,7 @@ export const dashboardSlice = createSlice({
             totalProfiles: 0,
             totalContacts: 0,
             totalRecruiters: 0,
+            lastContactDate: null,
             statusCounts: {},
             statusBreakdown: {},
             recruiterStats: [],

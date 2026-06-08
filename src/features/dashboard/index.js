@@ -62,7 +62,11 @@ function Dashboard(){
             title: "Total Profiles", 
             value: stats.totalProfiles.toString(), 
             icon: <UsersIcon className='w-8 h-8'/>, 
-            description: `${stats.totalContacts} contacts made`
+            description: `${stats.totalContacts} contacts made`,
+            tooltip: {
+                type: 'date',
+                date: stats.lastContactDate
+            }
         },
         {
             title: "Pending", 
