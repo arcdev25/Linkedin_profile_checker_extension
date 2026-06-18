@@ -38,6 +38,8 @@ function DailyReport(){
     const [owners, setOwners] = useState([])
     const [selectedUserId, setSelectedUserId] = useState("all")
     const [rawReports, setRawReports] = useState([])
+    const [sortKey, setSortKey] = useState(null)
+    const [sortDir, setSortDir] = useState('desc')
 
     const currentUser = useSelector((state) => state.auth.user)
     const isAdmin = currentUser?.role === "admin"
@@ -73,6 +75,24 @@ function DailyReport(){
             note: "-"
         }
     ])
+
+    const handleAdminSort = (key) => {
+        if (sortKey === key) {
+            setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+        } else {
+            setSortKey(key)
+            setSortDir('desc')
+        }
+    }
+
+    const sortedAdminReports = [...reports].sort((a, b) => {
+        if (!sortKey) return 0
+        const av = sortKey === 'user' ? String(a[sortKey] || '').toLowerCase() : Number(a[sortKey] ?? 0)
+        const bv = sortKey === 'user' ? String(b[sortKey] || '').toLowerCase() : Number(b[sortKey] ?? 0)
+        if (av < bv) return sortDir === 'asc' ? -1 : 1
+        if (av > bv) return sortDir === 'asc' ?  1 : -1
+        return 0
+    })
 
     const handleChange = (userId, field, value) => {
         const updatedReports = reports.map((report) => {
@@ -534,11 +554,14 @@ function DailyReport(){
             {!loading && isAdmin && (
                 <>
                     <ReportTable
-                        reports={reports}
+                        reports={sortedAdminReports}
                         handleChange={handleChange}
                         isAdmin={isAdmin}
                         currentUser={currentUser}
                         showUserColumns={true}
+                        sortKey={sortKey}
+                        sortDir={sortDir}
+                        onSort={handleAdminSort}
                     />
 
                     {saveMessage && (
