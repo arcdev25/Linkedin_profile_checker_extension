@@ -24,11 +24,6 @@ export const fetchDailyReports = async ({
         query = query.eq("user_id", selectedUserId)
     }
 
-    // Owner can only see their own data
-    if (!isAdmin) {
-        query = query.eq("user_id", userId)
-    }
-
     const { data, error } = await query
 
     if (error) throw error
