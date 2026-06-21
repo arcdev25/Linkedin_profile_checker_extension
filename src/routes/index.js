@@ -15,6 +15,7 @@ const Accounts = lazy(() => import('../pages/protected/Accounts'))
 const Owners = lazy(() => import('../pages/protected/Owners'))
 const DailyReport = lazy(() => import('../pages/protected/DailyReport'))
 const Rank = lazy(() => import('../pages/protected/Rank'))
+const ConversionRate = lazy(() => import('../pages/protected/ConversionRate'))
 
 const routes = [
   {
@@ -68,7 +69,11 @@ const routes = [
   {
     path: '/rank',
     component: Rank
-}
+  },
+  {
+    path: '/conversion-rate',
+    component: ConversionRate,
+  }
 ]
 
 export default routes

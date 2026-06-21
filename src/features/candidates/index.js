@@ -265,7 +265,7 @@ function Candidates() {
                             <tr>
                                 <th>#</th>
                                 <th>Name</th>
-                                <th>Country</th>
+                                <th>Location</th>
                                 <th>Status</th>
                                 <th>Company</th>
                                 <th>Last Contact</th>
@@ -308,7 +308,7 @@ function Candidates() {
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td>{candidate.country || 'N/A'}</td>
+                                            <td>{candidate.location || 'Unknown'}</td>
                                             <td>{getStatusBadge(candidate.status)}</td>
                                             <td>{candidate.recruiterName}</td>
                                             <td>{moment(candidate.lastContactDate).format("DD MMM YY")}</td>

@@ -6,6 +6,7 @@ import UserGroupIcon from '@heroicons/react/24/outline/UserGroupIcon'
 import XCircleIcon from '@heroicons/react/24/outline/XCircleIcon'
 import { ClipboardDocumentListIcon } from '@heroicons/react/24/outline'
 import { ChartBarIcon } from '@heroicons/react/24/outline'
+import { ChartPieIcon } from '@heroicons/react/24/outline'
 
 const iconClasses = `h-6 w-6`
 
@@ -46,6 +47,11 @@ const routes = [
       path: '/app/rank',
       icon: <ChartBarIcon className={iconClasses} />,
       name: 'Ranking',
+  },
+  {
+      path: '/app/conversion-rate',
+      icon: <ChartPieIcon className={iconClasses} />,
+      name: 'Conversion Rate',
   }
 ]
 
