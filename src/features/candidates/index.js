@@ -2,7 +2,7 @@ import moment from "moment"
 import { useEffect, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import TitleCard from "../../components/Cards/TitleCard"
-import { getCandidatesContent, getNeedReconnectionCandidates, downloadCandidatesCSV } from "./candidatesSlice"
+import { getCandidatesContent, getNeedReconnectionCandidates, downloadCandidatesCSV, updateContactStatus } from "./candidatesSlice"
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import TrashIcon from '@heroicons/react/24/outline/TrashIcon'
 import ArrowDownTrayIcon from '@heroicons/react/24/outline/ArrowDownTrayIcon'
@@ -192,6 +192,15 @@ function Candidates() {
         }
     }
 
+    const handleStatusChange = (candidate, newStatus) => {
+        if (!candidate.contactId || newStatus === candidate.status) return
+        dispatch(updateContactStatus({
+            contactId:   candidate.contactId,
+            newStatus,
+            recruiterId: candidate.recruiterId || null
+        }))
+    }
+
     const deleteCurrentCandidate = (candidate) => {
         const isReconnection = activeTab === 'reconnection'
         dispatch(openModal({
@@ -209,18 +218,16 @@ function Candidates() {
         }))
     }
 
-    const getStatusBadge = (status) => {
-        const statusMap = {
-            'pending':       'badge-warning',
-            'chatting':      'badge-info',
-            'sent js':       'badge-primary',
-            'not interested':'badge-error',
-            'success':       'badge-success',
-            'failed':        'badge-error',
-            'ghosted':       'badge-ghost',
-            'not contacted': 'badge-ghost'
-        }
-        return <div className={`badge ${statusMap[status] || 'badge-ghost'}`}>{status}</div>
+    const STATUS_COLORS = {
+        'pending':        { border: '#f59e0b', color: '#f59e0b' },  // amber
+        'chatting':       { border: '#3b82f6', color: '#3b82f6' },  // blue
+        'sent js':        { border: '#8b5cf6', color: '#8b5cf6' },  // purple
+        'not interested': { border: '#ef4444', color: '#ef4444' },  // red
+        'success':        { border: '#10b981', color: '#10b981' },  // green
+        'failed':         { border: '#ef4444', color: '#ef4444' },  // red
+        'ghosted':        { border: '#6b7280', color: '#6b7280' },  // gray
+        'not contacted':  { border: '#6b7280', color: '#6b7280' },  // gray
+        'accept':         { border: '#10b981', color: '#10b981' },  // green
     }
 
     return (
@@ -309,7 +316,21 @@ function Candidates() {
                                                 </div>
                                             </td>
                                             <td>{candidate.location || 'Unknown'}</td>
-                                            <td>{getStatusBadge(candidate.status)}</td>
+                                            <td>
+                                                <select
+                                                    value={candidate.status}
+                                                    onChange={e => handleStatusChange(candidate, e.target.value)}
+                                                    className="select select-bordered select-xs font-semibold"
+                                                    style={{
+                                                        borderColor: STATUS_COLORS[candidate.status]?.border || '#6b7280',
+                                                        color:       STATUS_COLORS[candidate.status]?.color  || '#6b7280',
+                                                    }}
+                                                >
+                                                    {STATUS_OPTIONS.map(s => (
+                                                        <option key={s} value={s} style={{ color: 'inherit' }}>{s}</option>
+                                                    ))}
+                                                </select>
+                                            </td>
                                             <td>{candidate.recruiterName}</td>
                                             <td>{moment(candidate.lastContactDate).format("DD MMM YY")}</td>
                                             <td>

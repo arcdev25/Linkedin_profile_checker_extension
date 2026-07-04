@@ -456,6 +456,17 @@ export const candidatesSlice = createSlice({
                 state.needReconnection = state.needReconnection.filter(c => c.contactId !== action.payload)
                 state.needReconnectionTotalCount = Math.max(0, state.needReconnectionTotalCount - 1)
             })
+            .addCase(updateContactStatus.fulfilled, (state, action) => {
+                const updated = action.payload
+                if (!updated) return
+                // Update status in both lists
+                state.candidates = state.candidates.map(c =>
+                    c.contactId === updated.id ? { ...c, status: updated.status } : c
+                )
+                state.needReconnection = state.needReconnection.map(c =>
+                    c.contactId === updated.id ? { ...c, status: updated.status } : c
+                )
+            })
     }
 })
 

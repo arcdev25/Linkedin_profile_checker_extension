@@ -64,6 +64,7 @@ export const getDashboardStats = createAsyncThunk('/dashboard/stats', async (par
     let recruitersQuery = supabase
         .from('recruiters')
         .select('*')
+        .is('deleted_at', null)   // exclude soft-deleted recruiters
     
     if (targetOwnerId) {
         recruitersQuery = recruitersQuery.eq('owner_id', targetOwnerId)
