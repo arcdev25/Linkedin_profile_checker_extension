@@ -10,7 +10,7 @@ import { openModal } from "../common/modalSlice"
 import { CONFIRMATION_MODAL_CLOSE_TYPES, MODAL_BODY_TYPES } from '../../utils/globalConstantUtil'
 import Pagination from "../../components/Pagination/Pagination"
 
-const STATUS_OPTIONS = ["pending", "chatting", "sent js", "not interested", "success", "ghosted"]
+const STATUS_OPTIONS = ["pending", "accept", "chatting", "sent js", "not interested", "success", "failed"]
 
 const TopSideButtons = ({
     activeTab,
@@ -195,9 +195,8 @@ function Candidates() {
     const handleStatusChange = (candidate, newStatus) => {
         if (!candidate.contactId || newStatus === candidate.status) return
         dispatch(updateContactStatus({
-            contactId:   candidate.contactId,
-            newStatus,
-            recruiterId: candidate.recruiterId || null
+            contactId: candidate.contactId,
+            newStatus
         }))
     }
 

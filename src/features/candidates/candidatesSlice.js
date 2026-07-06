@@ -392,14 +392,10 @@ export const deleteReconnectionContact = createAsyncThunk('/candidates/deleteRec
     return contactId
 })
 
-export const updateContactStatus = createAsyncThunk('/candidates/updateContact', async ({ contactId, newStatus, recruiterId }) => {
+export const updateContactStatus = createAsyncThunk('/candidates/updateContact', async ({ contactId, newStatus }) => {
     const { data, error } = await supabase
         .from('contacts')
-        .update({
-            status: newStatus,
-            recruiter_id: recruiterId,
-            contacted_at: new Date().toISOString()
-        })
+        .update({ status: newStatus })
         .eq('id', contactId)
         .select()
     if (error) throw error
@@ -459,7 +455,7 @@ export const candidatesSlice = createSlice({
             .addCase(updateContactStatus.fulfilled, (state, action) => {
                 const updated = action.payload
                 if (!updated) return
-                // Update status in both lists
+                // Only update the status field — preserve all other candidate data (recruiterName etc.)
                 state.candidates = state.candidates.map(c =>
                     c.contactId === updated.id ? { ...c, status: updated.status } : c
                 )
