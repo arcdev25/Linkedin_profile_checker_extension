@@ -112,7 +112,7 @@ export const getCandidatesContent = createAsyncThunk('/candidates/content', asyn
     const ownerFilter   = params?.ownerFilter   || null  // admin: filter by specific owner_id
 
     // ── Resolve recruiter IDs for owner ──────────────────────────────────────
-    let recruiterIds = null   // null = no restriction (admin)
+    let recruiterIds = null   // null = no restriction (admin, all owners)
     let recruiterCompanyMap = {}
 
     if (user?.role === 'owner') {
@@ -134,6 +134,25 @@ export const getCandidatesContent = createAsyncThunk('/candidates/content', asyn
 
         recruiterIds = filtered.map(r => r.id)
         filtered.forEach(r => { recruiterCompanyMap[r.id] = r.company })
+    }
+
+    // Admin scoped to a specific owner: resolve that owner's recruiter IDs
+    if (user?.role === 'admin' && ownerFilter) {
+        const { data: recruiters, error: rErr } = await supabase
+            .from('recruiters')
+            .select('id, company')
+            .eq('owner_id', ownerFilter)
+
+        if (rErr) throw rErr
+
+        const filtered = companyFilter
+            ? (recruiters || []).filter(r => (r.company || '').toLowerCase().includes(companyFilter.toLowerCase()))
+            : (recruiters || [])
+
+        recruiterIds = filtered.map(r => r.id)
+        filtered.forEach(r => { recruiterCompanyMap[r.id] = r.company })
+
+        if (recruiterIds.length === 0) return { data: [], totalCount: 0 }
     }
 
     // ── Query from profiles table so search works on profile columns ──────────
@@ -159,18 +178,13 @@ export const getCandidatesContent = createAsyncThunk('/candidates/content', asyn
         query = query.eq('contacts.status', statusFilter)
     }
 
-    // Owner scope — restrict to their recruiters (owner role)
+    // Owner scope — restrict to their recruiters (owner role or admin with owner selected)
     if (recruiterIds !== null) {
         query = query.in('contacts.recruiter_id', recruiterIds)
     }
 
-    // Admin: filter by a specific selected owner
-    if (user?.role === 'admin' && ownerFilter) {
-        query = query.eq('contacts.owner_id', ownerFilter)
-    }
-
-    // Company filter for admin (filter via joined recruiters)
-    if (user?.role === 'admin' && companyFilter) {
+    // Company filter for admin (no specific owner selected)
+    if (user?.role === 'admin' && !ownerFilter && companyFilter) {
         query = query.ilike('contacts.recruiters.company', `%${companyFilter}%`)
     }
 
