@@ -9,6 +9,7 @@ import ArrowDownTrayIcon from '@heroicons/react/24/outline/ArrowDownTrayIcon'
 import { openModal } from "../common/modalSlice"
 import { CONFIRMATION_MODAL_CLOSE_TYPES, MODAL_BODY_TYPES } from '../../utils/globalConstantUtil'
 import Pagination from "../../components/Pagination/Pagination"
+import { getAllOwners } from "../accounts/accountSlice"
 
 const STATUS_OPTIONS = ["pending", "accept", "chatting", "sent js", "not interested", "success", "failed"]
 
@@ -97,18 +98,27 @@ const TopSideButtons = ({
 
 function Candidates() {
     const { candidates, needReconnection, totalCount, needReconnectionTotalCount, isLoading } = useSelector(state => state.candidates)
+    const { owners } = useSelector(state => state.account)
+    const { user }   = useSelector(state => state.auth)
+    const isAdmin    = user?.role === 'admin'
     const dispatch   = useDispatch()
-    const [activeTab,      setActiveTab]      = useState('main')
-    const [currentPage,    setCurrentPage]    = useState(1)
-    const [searchText,     setSearchText]     = useState("")
-    const [noteSearch,     setNoteSearch]     = useState("")
-    const [statusFilter,   setStatusFilter]   = useState("")
-    const [companyFilter,  setCompanyFilter]  = useState("")
-    const [downloading,    setDownloading]    = useState(false)
+    const [activeTab,       setActiveTab]       = useState('main')
+    const [selectedOwnerId, setSelectedOwnerId] = useState(null)  // null = all owners (admin only)
+    const [currentPage,     setCurrentPage]     = useState(1)
+    const [searchText,      setSearchText]      = useState("")
+    const [noteSearch,      setNoteSearch]      = useState("")
+    const [statusFilter,    setStatusFilter]    = useState("")
+    const [companyFilter,   setCompanyFilter]   = useState("")
+    const [downloading,     setDownloading]     = useState(false)
     const itemsPerPage = 10
 
-    // Reset page whenever any filter changes
-    useEffect(() => { setCurrentPage(1) }, [searchText, noteSearch, statusFilter, companyFilter, activeTab])
+    // Load owners list for admin tabs
+    useEffect(() => {
+        if (isAdmin) dispatch(getAllOwners())
+    }, [dispatch, isAdmin])
+
+    // Reset to page 1 on any filter or owner change
+    useEffect(() => { setCurrentPage(1) }, [searchText, noteSearch, statusFilter, companyFilter, activeTab, selectedOwnerId])
 
     useEffect(() => {
         if (activeTab === 'main') {
@@ -118,7 +128,8 @@ function Candidates() {
                 searchTerm: searchText,
                 noteSearch,
                 statusFilter,
-                companyFilter
+                companyFilter,
+                ownerFilter: selectedOwnerId
             }))
         } else {
             dispatch(getNeedReconnectionCandidates({
@@ -128,7 +139,7 @@ function Candidates() {
                 noteSearch
             }))
         }
-    }, [dispatch, currentPage, activeTab, searchText, noteSearch, statusFilter, companyFilter])
+    }, [dispatch, currentPage, activeTab, searchText, noteSearch, statusFilter, companyFilter, selectedOwnerId])
 
     const currentData       = activeTab === 'main' ? candidates : needReconnection
     const currentTotalCount = activeTab === 'main' ? totalCount : needReconnectionTotalCount
@@ -136,6 +147,15 @@ function Candidates() {
 
     const handleTabChange = (tab) => {
         setActiveTab(tab)
+        setCurrentPage(1)
+        setSearchText("")
+        setNoteSearch("")
+        setStatusFilter("")
+        setCompanyFilter("")
+    }
+
+    const handleOwnerTabClick = (ownerId) => {
+        setSelectedOwnerId(ownerId)
         setCurrentPage(1)
         setSearchText("")
         setNoteSearch("")
@@ -231,7 +251,30 @@ function Candidates() {
 
     return (
         <>
-            {/* Tabs */}
+            {/* Owner tabs — admin only */}
+            {isAdmin && owners && owners.length > 0 && (
+                <div className="mb-4">
+                    <div className="tabs tabs-boxed bg-base-200">
+                        <button
+                            className={`tab ${selectedOwnerId === null ? 'tab-active' : ''}`}
+                            onClick={() => handleOwnerTabClick(null)}
+                        >
+                            All Owners
+                        </button>
+                        {owners.map(owner => (
+                            <button
+                                key={owner.id}
+                                className={`tab ${selectedOwnerId === owner.id ? 'tab-active' : ''}`}
+                                onClick={() => handleOwnerTabClick(owner.id)}
+                            >
+                                {owner.name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Main / Reconnection tabs */}
             <div className="mb-4">
                 <div className="tabs tabs-boxed bg-base-200">
                     <button

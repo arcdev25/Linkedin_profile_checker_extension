@@ -109,6 +109,7 @@ export const getCandidatesContent = createAsyncThunk('/candidates/content', asyn
     const noteSearch    = params?.noteSearch    || ''
     const statusFilter  = params?.statusFilter  || ''
     const companyFilter = params?.companyFilter || ''
+    const ownerFilter   = params?.ownerFilter   || null  // admin: filter by specific owner_id
 
     // ── Resolve recruiter IDs for owner ──────────────────────────────────────
     let recruiterIds = null   // null = no restriction (admin)
@@ -158,9 +159,14 @@ export const getCandidatesContent = createAsyncThunk('/candidates/content', asyn
         query = query.eq('contacts.status', statusFilter)
     }
 
-    // Owner scope — restrict to their recruiters
+    // Owner scope — restrict to their recruiters (owner role)
     if (recruiterIds !== null) {
         query = query.in('contacts.recruiter_id', recruiterIds)
+    }
+
+    // Admin: filter by a specific selected owner
+    if (user?.role === 'admin' && ownerFilter) {
+        query = query.eq('contacts.owner_id', ownerFilter)
     }
 
     // Company filter for admin (filter via joined recruiters)
