@@ -42,7 +42,7 @@ export const getNeedReconnectionCandidates = createAsyncThunk('/candidates/needR
                 headline,
                 profile_url,
                 avatar_url,
-                country,
+                location,
                 created_at
             ),
             recruiters (
@@ -177,7 +177,7 @@ export const getCandidatesContent = createAsyncThunk('/candidates/content', asyn
                 headline,
                 profile_url,
                 avatar_url,
-                country,
+                location,
                 created_at
             ),
             recruiters (
@@ -284,7 +284,7 @@ export const downloadCandidatesCSV = createAsyncThunk('/candidates/download', as
                 .from('contacts')
                 .select(`
                     id, status, notes, contacted_at, recruiter_id, owner_id,
-                    profiles!inner ( id, name, headline, profile_url, avatar_url, country, created_at ),
+                    profiles!inner ( id, name, headline, profile_url, avatar_url, location, created_at ),
                     recruiters ( id, name, company, deleted_at, deleted_name )
                 `)
                 .eq('status', 'need reconnection')
@@ -302,7 +302,7 @@ export const downloadCandidatesCSV = createAsyncThunk('/candidates/download', as
             .from('contacts')
             .select(`
                 id, status, notes, contacted_at, recruiter_id, owner_id,
-                profiles!inner ( id, name, headline, profile_url, avatar_url, country, created_at ),
+                profiles!inner ( id, name, headline, profile_url, avatar_url, location, created_at ),
                 recruiters ( company )
             `)
             .neq('status', 'failed')
@@ -352,7 +352,7 @@ export const downloadCandidatesCSV = createAsyncThunk('/candidates/download', as
             name:         profile?.name        || '',
             headline:     profile?.headline    || '',
             profile_url:  profile?.profile_url || '',
-            country:      profile?.country     || '',
+            location:      profile?.location     || '',
             status:       contact.status       || '',
             company,
             notes:        contact.notes        || '',
