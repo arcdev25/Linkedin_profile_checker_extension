@@ -25,56 +25,61 @@ export const getNeedReconnectionCandidates = createAsyncThunk('/candidates/needR
     const searchTerm = params?.searchTerm || ''
     const noteSearch = params?.noteSearch || ''
 
-    // Query from profiles so we can search profile columns directly
+    // Query from contacts table so count is accurate
     let query = supabase
-        .from('profiles')
+        .from('contacts')
         .select(`
-            *,
-            contacts!inner (
+            id,
+            status,
+            notes,
+            contacted_at,
+            recruiter_id,
+            owner_id,
+            profiles!inner (
                 id,
-                status,
-                notes,
-                contacted_at,
-                recruiter_id,
-                owner_id,
-                recruiters (
-                    id,
-                    name,
-                    company,
-                    deleted_at,
-                    deleted_name
-                )
+                linkedin_id,
+                name,
+                headline,
+                profile_url,
+                avatar_url,
+                country,
+                created_at
+            ),
+            recruiters (
+                id,
+                name,
+                company,
+                deleted_at,
+                deleted_name
             )
         `, { count: 'exact' })
-        .eq('contacts.status', 'need reconnection')
-        .order('created_at', { ascending: false })
+        .eq('status', 'need reconnection')
+        .order('contacted_at', { ascending: false })
 
     if (user?.role === 'owner') {
-        query = query.eq('contacts.owner_id', user.id)
+        query = query.eq('owner_id', user.id)
     }
 
     if (searchTerm) {
         query = query.or(
-            `name.ilike.%${searchTerm}%,headline.ilike.%${searchTerm}%,profile_url.ilike.%${searchTerm}%`
+            `profiles.name.ilike.%${searchTerm}%,profiles.headline.ilike.%${searchTerm}%,profiles.profile_url.ilike.%${searchTerm}%`,
+            { foreignTable: 'profiles' }
         )
     }
 
     if (noteSearch) {
-        query = query.ilike('contacts.notes', `%${noteSearch}%`)
+        query = query.ilike('notes', `%${noteSearch}%`)
     }
 
     query = query.range(offset, offset + limit - 1)
 
-    const { data: profiles, error, count } = await query
+    const { data: contacts, error, count } = await query
     if (error) throw error
 
-    const candidates = (profiles || []).map(profile => {
-        const contact = Array.isArray(profile.contacts)
-            ? profile.contacts.sort((a, b) => new Date(b.contacted_at) - new Date(a.contacted_at))[0]
-            : profile.contacts
+    const candidates = (contacts || []).map(contact => {
+        const profile   = contact.profiles
+        const recruiter = contact.recruiters
 
-        const recruiter = contact?.recruiters
-        // Use company for display; fall back to deleted_name if soft-deleted, then 'N/A'
         const recruiterName = recruiter
             ? (recruiter.deleted_at
                 ? `${recruiter.company || recruiter.deleted_name || 'Deleted'} (deleted)`
@@ -82,14 +87,14 @@ export const getNeedReconnectionCandidates = createAsyncThunk('/candidates/needR
             : 'N/A'
 
         return {
-            ...profile,
-            status: contact?.status || 'need reconnection',
-            lastContactDate: contact?.contacted_at || profile.created_at,
+            ...(profile || {}),
+            status:          contact.status || 'need reconnection',
+            lastContactDate: contact.contacted_at || profile?.created_at,
             recruiterName,
-            notes: contact?.notes || '',
-            contactId: contact?.id || null,
-            recruiterId: contact?.recruiter_id,
-            ownerId: contact?.owner_id
+            notes:           contact.notes || '',
+            contactId:       contact.id || null,
+            recruiterId:     contact.recruiter_id,
+            ownerId:         contact.owner_id,
         }
     })
 
@@ -155,71 +160,83 @@ export const getCandidatesContent = createAsyncThunk('/candidates/content', asyn
         if (recruiterIds.length === 0) return { data: [], totalCount: 0 }
     }
 
-    // ── Query from profiles table so search works on profile columns ──────────
+    // ── Query from contacts table (accurate count + filtering on contact columns) ──
     let query = supabase
-        .from('profiles')
+        .from('contacts')
         .select(`
-            *,
-            contacts!inner (
+            id,
+            status,
+            notes,
+            contacted_at,
+            recruiter_id,
+            owner_id,
+            profiles!inner (
                 id,
-                status,
-                notes,
-                contacted_at,
-                recruiter_id,
-                owner_id,
-                recruiters (company)
+                linkedin_id,
+                name,
+                headline,
+                profile_url,
+                avatar_url,
+                country,
+                created_at
+            ),
+            recruiters (
+                id,
+                company
             )
         `, { count: 'exact' })
-        .neq('contacts.status', 'failed')
-        .order('created_at', { ascending: false })
+        .neq('status', 'failed')
+        .order('contacted_at', { ascending: false })
 
     // Status filter
     if (statusFilter) {
-        query = query.eq('contacts.status', statusFilter)
+        query = query.eq('status', statusFilter)
     }
 
-    // Owner scope — restrict to their recruiters (owner role or admin with owner selected)
+    // Owner scope — restrict to specific recruiters
     if (recruiterIds !== null) {
-        query = query.in('contacts.recruiter_id', recruiterIds)
+        query = query.in('recruiter_id', recruiterIds)
     }
 
-    // Company filter for admin (no specific owner selected)
+    // Company filter for admin (no specific owner selected) — filter via joined recruiters
     if (user?.role === 'admin' && !ownerFilter && companyFilter) {
-        query = query.ilike('contacts.recruiters.company', `%${companyFilter}%`)
+        query = query.ilike('recruiters.company', `%${companyFilter}%`)
     }
 
-    // Search: name, headline, profile_url — all on the profiles table (base table)
+    // Search on profile fields via the join
     if (searchTerm) {
         query = query.or(
-            `name.ilike.%${searchTerm}%,headline.ilike.%${searchTerm}%,profile_url.ilike.%${searchTerm}%`
+            `profiles.name.ilike.%${searchTerm}%,profiles.headline.ilike.%${searchTerm}%,profiles.profile_url.ilike.%${searchTerm}%`,
+            { foreignTable: 'profiles' }
         )
     }
 
-    // Note search — filters on contacts.notes via the join
+    // Note search on contacts.notes (base table column — works directly)
     if (noteSearch) {
-        query = query.ilike('contacts.notes', `%${noteSearch}%`)
+        query = query.ilike('notes', `%${noteSearch}%`)
     }
 
     query = query.range(offset, offset + limit - 1)
 
-    const { data: profiles, error, count } = await query
+    const { data: contacts, error, count } = await query
     if (error) throw error
 
-    const candidates = (profiles || []).map(profile => {
-        const contactList = Array.isArray(profile.contacts) ? profile.contacts : [profile.contacts].filter(Boolean)
-        const latestContact = contactList.sort((a, b) => new Date(b.contacted_at) - new Date(a.contacted_at))[0]
+    const candidates = (contacts || []).map(contact => {
+        const profile = contact.profiles
 
-        const company = latestContact?.recruiters?.company
-            || recruiterCompanyMap[latestContact?.recruiter_id]
+        const company = contact.recruiters?.company
+            || recruiterCompanyMap[contact.recruiter_id]
             || 'Unassigned'
 
         return {
-            ...profile,
-            status: latestContact?.status || 'not contacted',
-            lastContactDate: latestContact?.contacted_at || profile.created_at,
-            recruiterName: company,
-            notes: latestContact?.notes || '',
-            contactId: latestContact?.id || null
+            ...(profile || {}),
+            status:          contact.status || 'not contacted',
+            lastContactDate: contact.contacted_at || profile?.created_at,
+            recruiterName:   company,
+            notes:           contact.notes || '',
+            contactId:       contact.id || null,
+            recruiterId:     contact.recruiter_id,
+            ownerId:         contact.owner_id,
         }
     })
 
@@ -260,84 +277,86 @@ export const downloadCandidatesCSV = createAsyncThunk('/candidates/download', as
         filtered.forEach(r => { recruiterCompanyMap[r.id] = r.company })
     }
 
-    // Build the base query (same shape as getCandidatesContent / getNeedReconnectionCandidates)
+    // Build the base query — contacts is the base table for accurate results
     const buildQuery = (from) => {
         if (activeTab === 'reconnection') {
             let q = supabase
-                .from('profiles')
+                .from('contacts')
                 .select(`
-                    *,
-                    contacts!inner (
-                        id, status, notes, contacted_at, recruiter_id, owner_id,
-                        recruiters ( id, name, company, deleted_at, deleted_name )
-                    )
+                    id, status, notes, contacted_at, recruiter_id, owner_id,
+                    profiles!inner ( id, name, headline, profile_url, avatar_url, country, created_at ),
+                    recruiters ( id, name, company, deleted_at, deleted_name )
                 `)
-                .eq('contacts.status', 'need reconnection')
-                .order('created_at', { ascending: false })
-            if (user?.role === 'owner') q = q.eq('contacts.owner_id', user.id)
-            if (searchTerm) q = q.or(`name.ilike.%${searchTerm}%,headline.ilike.%${searchTerm}%,profile_url.ilike.%${searchTerm}%`)
+                .eq('status', 'need reconnection')
+                .order('contacted_at', { ascending: false })
+            if (user?.role === 'owner') q = q.eq('owner_id', user.id)
+            if (searchTerm) q = q.or(
+                `profiles.name.ilike.%${searchTerm}%,profiles.headline.ilike.%${searchTerm}%,profiles.profile_url.ilike.%${searchTerm}%`,
+                { foreignTable: 'profiles' }
+            )
+            if (noteSearch) q = q.ilike('notes', `%${noteSearch}%`)
             return q.range(from, from + PAGE_SIZE - 1)
         }
 
         let q = supabase
-            .from('profiles')
+            .from('contacts')
             .select(`
-                *,
-                contacts!inner (
-                    id, status, notes, contacted_at, recruiter_id, owner_id,
-                    recruiters ( company )
-                )
+                id, status, notes, contacted_at, recruiter_id, owner_id,
+                profiles!inner ( id, name, headline, profile_url, avatar_url, country, created_at ),
+                recruiters ( company )
             `)
-            .neq('contacts.status', 'failed')
-            .order('created_at', { ascending: false })
+            .neq('status', 'failed')
+            .order('contacted_at', { ascending: false })
 
-        if (statusFilter)  q = q.eq('contacts.status', statusFilter)
-        if (recruiterIds !== null) q = q.in('contacts.recruiter_id', recruiterIds)
-        if (user?.role === 'admin' && companyFilter) q = q.ilike('contacts.recruiters.company', `%${companyFilter}%`)
-        if (searchTerm)    q = q.or(`name.ilike.%${searchTerm}%,headline.ilike.%${searchTerm}%,profile_url.ilike.%${searchTerm}%`)
-        if (noteSearch)    q = q.ilike('contacts.notes', `%${noteSearch}%`)
+        if (statusFilter) q = q.eq('status', statusFilter)
+        if (recruiterIds !== null) q = q.in('recruiter_id', recruiterIds)
+        if (user?.role === 'admin' && companyFilter) q = q.ilike('recruiters.company', `%${companyFilter}%`)
+        if (searchTerm) q = q.or(
+            `profiles.name.ilike.%${searchTerm}%,profiles.headline.ilike.%${searchTerm}%,profiles.profile_url.ilike.%${searchTerm}%`,
+            { foreignTable: 'profiles' }
+        )
+        if (noteSearch) q = q.ilike('notes', `%${noteSearch}%`)
         return q.range(from, from + PAGE_SIZE - 1)
     }
 
     // Paginate through all results
-    let allProfiles = []
+    let allContacts = []
     let from = 0
     while (true) {
         const { data, error } = await buildQuery(from)
         if (error) throw error
-        allProfiles = allProfiles.concat(data || [])
+        allContacts = allContacts.concat(data || [])
         if (!data || data.length < PAGE_SIZE) break
         from += PAGE_SIZE
     }
 
     // Map to flat rows
-    return allProfiles.map(profile => {
-        const contactList = Array.isArray(profile.contacts) ? profile.contacts : [profile.contacts].filter(Boolean)
-        const contact = contactList.sort((a, b) => new Date(b.contacted_at) - new Date(a.contacted_at))[0]
+    return allContacts.map(contact => {
+        const profile = contact.profiles
 
         let company = 'Unassigned'
         if (activeTab === 'reconnection') {
-            const rec = contact?.recruiters
+            const rec = contact.recruiters
             company = rec
                 ? (rec.deleted_at
                     ? `${rec.company || rec.deleted_name || 'Deleted'} (deleted)`
                     : (rec.company || rec.name || 'N/A'))
                 : 'N/A'
         } else {
-            company = contact?.recruiters?.company
-                || recruiterCompanyMap[contact?.recruiter_id]
+            company = contact.recruiters?.company
+                || recruiterCompanyMap[contact.recruiter_id]
                 || 'Unassigned'
         }
 
         return {
-            name:           profile.name          || '',
-            headline:       profile.headline       || '',
-            profile_url:    profile.profile_url    || '',
-            country:        profile.country        || '',
-            status:         contact?.status        || '',
+            name:         profile?.name        || '',
+            headline:     profile?.headline    || '',
+            profile_url:  profile?.profile_url || '',
+            country:      profile?.country     || '',
+            status:       contact.status       || '',
             company,
-            notes:          contact?.notes         || '',
-            last_contact:   contact?.contacted_at  ? moment(contact.contacted_at).format('YYYY-MM-DD HH:mm') : '',
+            notes:        contact.notes        || '',
+            last_contact: contact.contacted_at ? moment(contact.contacted_at).format('YYYY-MM-DD HH:mm') : '',
         }
     })
 })
