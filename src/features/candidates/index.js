@@ -374,7 +374,7 @@ function Candidates() {
                                                 </select>
                                             </td>
                                             <td>{candidate.recruiterName}</td>
-                                            <td>{moment(candidate.lastContactDate).format("DD MMM YY")}</td>
+                                            <td>{moment(candidate.lastContactDate).utcOffset(180).format("DD MMM HH:mm")}</td>
                                             <td>
                                                 <button className="btn btn-square btn-ghost btn-sm" onClick={() => deleteCurrentCandidate(candidate)}>
                                                     <TrashIcon className="w-5"/>
