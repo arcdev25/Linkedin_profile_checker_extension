@@ -60,11 +60,16 @@ export const getNeedReconnectionCandidates = createAsyncThunk('/candidates/needR
         query = query.eq('owner_id', user.id)
     }
 
+    // Search — pre-query profiles then filter by profile_id
     if (searchTerm) {
-        query = query.or(
-            `profiles.name.ilike.%${searchTerm}%,profiles.headline.ilike.%${searchTerm}%,profiles.profile_url.ilike.%${searchTerm}%`,
-            { foreignTable: 'profiles' }
-        )
+        const { data: matchingProfiles, error: searchErr } = await supabase
+            .from('profiles')
+            .select('id')
+            .or(`name.ilike.%${searchTerm}%,headline.ilike.%${searchTerm}%,profile_url.ilike.%${searchTerm}%`)
+        if (searchErr) throw searchErr
+        const profileIds = (matchingProfiles || []).map(p => p.id)
+        if (profileIds.length === 0) return { data: [], totalCount: 0 }
+        query = query.in('profile_id', profileIds)
     }
 
     if (noteSearch) {
@@ -160,6 +165,18 @@ export const getCandidatesContent = createAsyncThunk('/candidates/content', asyn
         if (recruiterIds.length === 0) return { data: [], totalCount: 0 }
     }
 
+    // ── Resolve profile IDs for search term (pre-query profiles table) ──────
+    let searchProfileIds = null  // null = no search restriction
+    if (searchTerm) {
+        const { data: matchingProfiles, error: searchErr } = await supabase
+            .from('profiles')
+            .select('id')
+            .or(`name.ilike.%${searchTerm}%,headline.ilike.%${searchTerm}%,profile_url.ilike.%${searchTerm}%`)
+        if (searchErr) throw searchErr
+        searchProfileIds = (matchingProfiles || []).map(p => p.id)
+        if (searchProfileIds.length === 0) return { data: [], totalCount: 0 }
+    }
+
     // ── Query from contacts table (accurate count + filtering on contact columns) ──
     let query = supabase
         .from('contacts')
@@ -203,12 +220,9 @@ export const getCandidatesContent = createAsyncThunk('/candidates/content', asyn
         query = query.ilike('recruiters.company', `%${companyFilter}%`)
     }
 
-    // Search on profile fields via the join
-    if (searchTerm) {
-        query = query.or(
-            `profiles.name.ilike.%${searchTerm}%,profiles.headline.ilike.%${searchTerm}%,profiles.profile_url.ilike.%${searchTerm}%`,
-            { foreignTable: 'profiles' }
-        )
+    // Search — filter by pre-resolved profile IDs
+    if (searchProfileIds !== null) {
+        query = query.in('profile_id', searchProfileIds)
     }
 
     // Note search on contacts.notes (base table column — works directly)
@@ -277,6 +291,16 @@ export const downloadCandidatesCSV = createAsyncThunk('/candidates/download', as
         filtered.forEach(r => { recruiterCompanyMap[r.id] = r.company })
     }
 
+    // Pre-resolve profile IDs for search (same pattern as getCandidatesContent)
+    let searchProfileIds = null
+    if (searchTerm) {
+        const { data: mp } = await supabase
+            .from('profiles').select('id')
+            .or(`name.ilike.%${searchTerm}%,headline.ilike.%${searchTerm}%,profile_url.ilike.%${searchTerm}%`)
+        searchProfileIds = (mp || []).map(p => p.id)
+        if (searchProfileIds.length === 0) return []
+    }
+
     // Build the base query — contacts is the base table for accurate results
     const buildQuery = (from) => {
         if (activeTab === 'reconnection') {
@@ -290,10 +314,7 @@ export const downloadCandidatesCSV = createAsyncThunk('/candidates/download', as
                 .eq('status', 'need reconnection')
                 .order('contacted_at', { ascending: false })
             if (user?.role === 'owner') q = q.eq('owner_id', user.id)
-            if (searchTerm) q = q.or(
-                `profiles.name.ilike.%${searchTerm}%,profiles.headline.ilike.%${searchTerm}%,profiles.profile_url.ilike.%${searchTerm}%`,
-                { foreignTable: 'profiles' }
-            )
+            if (searchProfileIds !== null) q = q.in('profile_id', searchProfileIds)
             if (noteSearch) q = q.ilike('notes', `%${noteSearch}%`)
             return q.range(from, from + PAGE_SIZE - 1)
         }
@@ -311,10 +332,7 @@ export const downloadCandidatesCSV = createAsyncThunk('/candidates/download', as
         if (statusFilter) q = q.eq('status', statusFilter)
         if (recruiterIds !== null) q = q.in('recruiter_id', recruiterIds)
         if (user?.role === 'admin' && companyFilter) q = q.ilike('recruiters.company', `%${companyFilter}%`)
-        if (searchTerm) q = q.or(
-            `profiles.name.ilike.%${searchTerm}%,profiles.headline.ilike.%${searchTerm}%,profiles.profile_url.ilike.%${searchTerm}%`,
-            { foreignTable: 'profiles' }
-        )
+        if (searchProfileIds !== null) q = q.in('profile_id', searchProfileIds)
         if (noteSearch) q = q.ilike('notes', `%${noteSearch}%`)
         return q.range(from, from + PAGE_SIZE - 1)
     }
