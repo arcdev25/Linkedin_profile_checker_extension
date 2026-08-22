@@ -3,7 +3,7 @@ import { supabase } from '../../app/supabaseClient'
 
 // Owner permission mapping — defines which owners can see other owners' data
 const OWNER_PERMISSIONS = {
-    'yura@owner.com': ['Faker@owner.com', '0xGiant@owner.com'],
+    'Yura@owner.com': ['Faker@owner.com', '0xGiant@owner.com'],
     'Rape@owner.com': ['0xStrong@owner.com', 'Voldmot@owner.com']
 }
 

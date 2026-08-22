@@ -28,7 +28,7 @@ function Dashboard(){
 
     // Privileged owners also have cross-owner visibility
     const OWNER_PERMISSIONS = {
-        'yura@owner.com': ['Faker@owner.com', '0xGiant@owner.com'],
+        'Yura@owner.com': ['Faker@owner.com', '0xGiant@owner.com'],
         'Rape@owner.com': ['0xStrong@owner.com', 'Voldmot@owner.com']
     }
     const isPrivilegedOwner = user?.role === 'owner' && !!(OWNER_PERMISSIONS[user?.email])
