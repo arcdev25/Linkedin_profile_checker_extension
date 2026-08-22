@@ -1,6 +1,12 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import { supabase } from '../../app/supabaseClient'
 
+// Owner permission mapping — defines which owners can see other owners' data
+const OWNER_PERMISSIONS = {
+    'yura@owner.com': ['Faker@owner.com', '0xGiant@owner.com'],
+    'Rape@owner.com': ['0xStrong@owner.com', 'Voldmot@owner.com']
+}
+
 export const getAccountsContent = createAsyncThunk('/accounts/content', async (params, { getState }) => {
     const { auth } = getState()
     const user = auth.user
@@ -46,16 +52,35 @@ export const getAccountsContent = createAsyncThunk('/accounts/content', async (p
     return { data, totalCount: count }
 })
 
-// Get all owners for admin tabs
-export const getAllOwners = createAsyncThunk('/account/owners', async () => {
-    const { data, error } = await supabase
+// Get all owners for admin tabs (or privileged owners)
+export const getAllOwners = createAsyncThunk('/account/owners', async (_, { getState }) => {
+    const { auth } = getState()
+    const user = auth.user
+
+    const { data: allOwners, error } = await supabase
         .from('owners')
         .select('id, name, email, role')
         .eq('role', 'owner')
         .order('name', { ascending: true })
-    
+
     if (error) throw error
-    return data || []
+
+    // Admin sees everyone
+    if (user?.role === 'admin') {
+        return allOwners || []
+    }
+
+    // Privileged owner: return self + permitted owners
+    const allowedEmails = OWNER_PERMISSIONS[user?.email] || []
+    if (allowedEmails.length > 0) {
+        const visible = (allOwners || []).filter(
+            o => o.id === user.id || allowedEmails.includes(o.email)
+        )
+        return visible
+    }
+
+    // Regular owner — only themselves
+    return (allOwners || []).filter(o => o.id === user?.id)
 })
 
 export const addAccountToDb = createAsyncThunk('/accounts/add', async (accountObj, { getState }) => {

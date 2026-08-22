@@ -101,6 +101,13 @@ function Candidates() {
     const { owners } = useSelector(state => state.account)
     const { user }   = useSelector(state => state.auth)
     const isAdmin    = user?.role === 'admin'
+
+    // Privileged owners also have cross-owner visibility
+    const OWNER_PERMISSIONS_MAP = {
+        'yura@owner.com': ['Faker@owner.com', '0xGiant@owner.com'],
+        'Rape@owner.com': ['0xStrong@owner.com', 'Voldmot@owner.com']
+    }
+    const isPrivilegedOwner = user?.role === 'owner' && !!(OWNER_PERMISSIONS_MAP[user?.email])
     const dispatch   = useDispatch()
     const [activeTab,       setActiveTab]       = useState('main')
     const [selectedOwnerId, setSelectedOwnerId] = useState(null)  // null = all owners (admin only)
@@ -112,10 +119,10 @@ function Candidates() {
     const [downloading,     setDownloading]     = useState(false)
     const itemsPerPage = 10
 
-    // Load owners list for admin tabs
+    // Load owners list for admin tabs or privileged owners
     useEffect(() => {
-        if (isAdmin) dispatch(getAllOwners())
-    }, [dispatch, isAdmin])
+        if (isAdmin || isPrivilegedOwner) dispatch(getAllOwners())
+    }, [dispatch, isAdmin, isPrivilegedOwner])
 
     // Reset to page 1 on any filter or owner change
     useEffect(() => { setCurrentPage(1) }, [searchText, noteSearch, statusFilter, companyFilter, activeTab, selectedOwnerId])
@@ -136,7 +143,8 @@ function Candidates() {
                 page: currentPage,
                 limit: itemsPerPage,
                 searchTerm: searchText,
-                noteSearch
+                noteSearch,
+                ownerFilter: selectedOwnerId
             }))
         }
     }, [dispatch, currentPage, activeTab, searchText, noteSearch, statusFilter, companyFilter, selectedOwnerId])
@@ -251,16 +259,18 @@ function Candidates() {
 
     return (
         <>
-            {/* Owner tabs — admin only */}
-            {isAdmin && owners && owners.length > 0 && (
+            {/* Owner tabs — admin and privileged owners */}
+            {(isAdmin || isPrivilegedOwner) && owners && owners.length > 0 && (
                 <div className="mb-4">
                     <div className="tabs tabs-boxed bg-base-200">
-                        <button
-                            className={`tab ${selectedOwnerId === null ? 'tab-active' : ''}`}
-                            onClick={() => handleOwnerTabClick(null)}
-                        >
-                            All Owners
-                        </button>
+                        {isAdmin && (
+                            <button
+                                className={`tab ${selectedOwnerId === null ? 'tab-active' : ''}`}
+                                onClick={() => handleOwnerTabClick(null)}
+                            >
+                                All Owners
+                            </button>
+                        )}
                         {owners.map(owner => (
                             <button
                                 key={owner.id}

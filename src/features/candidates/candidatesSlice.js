@@ -2,11 +2,61 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import { supabase } from '../../app/supabaseClient'
 import moment from 'moment'
 
+// ─── Owner Permissions ──────────────────────────────────────────────────────
+
+// Owner permission mapping - defines which owners can see other owners' data
+const OWNER_PERMISSIONS = {
+    'yura@owner.com': ['Faker@owner.com', '0xGiant@owner.com'],
+    'Rape@owner.com': ['0xStrong@owner.com', 'Voldmot@owner.com']
+}
+
 // ─── helpers ────────────────────────────────────────────────────────────────
 
+// Helper function to get target owner IDs based on user permissions
+const getTargetOwnerIds = async (user, ownerFilter = null) => {
+    if (user?.role === 'admin') {
+        // Admin can specify a particular owner or see all owners
+        if (ownerFilter) {
+            return [ownerFilter]
+        }
+        return null // null = all owners
+    } else if (user?.role === 'owner') {
+        // Check if this owner has permission to see other owners' data
+        const allowedEmails = OWNER_PERMISSIONS[user.email] || []
+        
+        if (allowedEmails.length > 0) {
+            // Get the owner IDs for the allowed emails
+            const { data: allowedOwners } = await supabase
+                .from('owners')
+                .select('id')
+                .in('email', allowedEmails)
+            
+            const allowedOwnerIds = (allowedOwners || []).map(o => o.id)
+            
+            if (ownerFilter && allowedOwnerIds.includes(ownerFilter)) {
+                // Owner requesting specific allowed owner's data
+                return [ownerFilter]
+            } else if (!ownerFilter) {
+                // Owner requesting all data they can see (self + allowed owners)
+                return [user.id, ...allowedOwnerIds]
+            } else {
+                // Owner requesting their own data or invalid owner
+                return [user.id]
+            }
+        } else {
+            // Regular owner - only their own data
+            return [user.id]
+        }
+    }
+    
+    return null
+}
+
 // Build the owner-scoping filter string for contacts.or()
-const ownerOrClause = (recruiterIds, ownerId) => {
-    const parts = [`owner_id.eq.${ownerId}`]
+const ownerOrClause = (recruiterIds, ownerIds) => {
+    if (!ownerIds || ownerIds.length === 0) return null
+    
+    const parts = [`owner_id.in.(${ownerIds.join(',')})`]
     if (recruiterIds.length > 0) {
         parts.push(`recruiter_id.in.(${recruiterIds.join(',')})`)
     }
@@ -24,12 +74,17 @@ export const getNeedReconnectionCandidates = createAsyncThunk('/candidates/needR
     const offset     = (page - 1) * limit
     const searchTerm = params?.searchTerm || ''
     const noteSearch = params?.noteSearch || ''
+    const ownerFilter = params?.ownerFilter || null
+
+    // Get target owner IDs based on user permissions
+    const targetOwnerIds = await getTargetOwnerIds(user, ownerFilter)
 
     // Query from contacts table so count is accurate
     let query = supabase
         .from('contacts')
         .select(`
             id,
+            profile_id,
             status,
             notes,
             contacted_at,
@@ -56,8 +111,9 @@ export const getNeedReconnectionCandidates = createAsyncThunk('/candidates/needR
         .eq('status', 'need reconnection')
         .order('contacted_at', { ascending: false })
 
-    if (user?.role === 'owner') {
-        query = query.eq('owner_id', user.id)
+    // Apply owner filtering based on permissions
+    if (targetOwnerIds) {
+        query = query.in('owner_id', targetOwnerIds)
     }
 
     // Search — pre-query profiles then filter by profile_id
@@ -121,15 +177,18 @@ export const getCandidatesContent = createAsyncThunk('/candidates/content', asyn
     const companyFilter = params?.companyFilter || ''
     const ownerFilter   = params?.ownerFilter   || null  // admin: filter by specific owner_id
 
+    // Get target owner IDs based on user permissions  
+    const targetOwnerIds = await getTargetOwnerIds(user, ownerFilter)
+
     // ── Resolve recruiter IDs for owner ──────────────────────────────────────
     let recruiterIds = null   // null = no restriction (admin, all owners)
     let recruiterCompanyMap = {}
 
-    if (user?.role === 'owner') {
+    if (targetOwnerIds) {
         const { data: recruiters, error: rErr } = await supabase
             .from('recruiters')
             .select('id, company')
-            .eq('owner_id', user.id)
+            .in('owner_id', targetOwnerIds)
 
         if (rErr) throw rErr
         if (!recruiters || recruiters.length === 0) return { data: [], totalCount: 0 }
@@ -144,25 +203,6 @@ export const getCandidatesContent = createAsyncThunk('/candidates/content', asyn
 
         recruiterIds = filtered.map(r => r.id)
         filtered.forEach(r => { recruiterCompanyMap[r.id] = r.company })
-    }
-
-    // Admin scoped to a specific owner: resolve that owner's recruiter IDs
-    if (user?.role === 'admin' && ownerFilter) {
-        const { data: recruiters, error: rErr } = await supabase
-            .from('recruiters')
-            .select('id, company')
-            .eq('owner_id', ownerFilter)
-
-        if (rErr) throw rErr
-
-        const filtered = companyFilter
-            ? (recruiters || []).filter(r => (r.company || '').toLowerCase().includes(companyFilter.toLowerCase()))
-            : (recruiters || [])
-
-        recruiterIds = filtered.map(r => r.id)
-        filtered.forEach(r => { recruiterCompanyMap[r.id] = r.company })
-
-        if (recruiterIds.length === 0) return { data: [], totalCount: 0 }
     }
 
     // ── Resolve profile IDs for search term (pre-query profiles table) ──────
@@ -182,6 +222,7 @@ export const getCandidatesContent = createAsyncThunk('/candidates/content', asyn
         .from('contacts')
         .select(`
             id,
+            profile_id,
             status,
             notes,
             contacted_at,
@@ -210,9 +251,12 @@ export const getCandidatesContent = createAsyncThunk('/candidates/content', asyn
         query = query.eq('status', statusFilter)
     }
 
-    // Owner scope — restrict to specific recruiters
+    // Owner scope — restrict to specific recruiters based on permissions
     if (recruiterIds !== null) {
         query = query.in('recruiter_id', recruiterIds)
+    } else if (targetOwnerIds) {
+        // If no specific recruiters but we have owner restrictions
+        query = query.in('owner_id', targetOwnerIds)
     }
 
     // Company filter for admin (no specific owner selected) — filter via joined recruiters
@@ -268,16 +312,20 @@ export const downloadCandidatesCSV = createAsyncThunk('/candidates/download', as
     const statusFilter  = params?.statusFilter  || ''
     const companyFilter = params?.companyFilter || ''
     const activeTab     = params?.activeTab     || 'main'
+    const ownerFilter   = params?.ownerFilter   || null
     const PAGE_SIZE     = 1000
+
+    // Get target owner IDs based on user permissions  
+    const targetOwnerIds = await getTargetOwnerIds(user, ownerFilter)
 
     let recruiterIds        = null
     let recruiterCompanyMap = {}
 
-    if (user?.role === 'owner') {
+    if (targetOwnerIds) {
         const { data: recruiters, error: rErr } = await supabase
             .from('recruiters')
             .select('id, company')
-            .eq('owner_id', user.id)
+            .in('owner_id', targetOwnerIds)
         if (rErr) throw rErr
         if (!recruiters || recruiters.length === 0) return []
 
@@ -313,7 +361,12 @@ export const downloadCandidatesCSV = createAsyncThunk('/candidates/download', as
                 `)
                 .eq('status', 'need reconnection')
                 .order('contacted_at', { ascending: false })
-            if (user?.role === 'owner') q = q.eq('owner_id', user.id)
+            
+            // Apply owner filtering based on permissions
+            if (targetOwnerIds) {
+                q = q.in('owner_id', targetOwnerIds)
+            }
+            
             if (searchProfileIds !== null) q = q.in('profile_id', searchProfileIds)
             if (noteSearch) q = q.ilike('notes', `%${noteSearch}%`)
             return q.range(from, from + PAGE_SIZE - 1)
@@ -331,7 +384,9 @@ export const downloadCandidatesCSV = createAsyncThunk('/candidates/download', as
 
         if (statusFilter) q = q.eq('status', statusFilter)
         if (recruiterIds !== null) q = q.in('recruiter_id', recruiterIds)
-        if (user?.role === 'admin' && companyFilter) q = q.ilike('recruiters.company', `%${companyFilter}%`)
+        else if (targetOwnerIds) q = q.in('owner_id', targetOwnerIds)
+        
+        if (user?.role === 'admin' && !ownerFilter && companyFilter) q = q.ilike('recruiters.company', `%${companyFilter}%`)
         if (searchProfileIds !== null) q = q.in('profile_id', searchProfileIds)
         if (noteSearch) q = q.ilike('notes', `%${noteSearch}%`)
         return q.range(from, from + PAGE_SIZE - 1)

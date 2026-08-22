@@ -25,17 +25,24 @@ function Dashboard(){
     const { stats, isLoading, owners, selectedOwnerId } = useSelector(state => state.dashboard)
     const { user } = useSelector(state => state.auth)
     const isAdmin = user?.role === 'admin'
+
+    // Privileged owners also have cross-owner visibility
+    const OWNER_PERMISSIONS = {
+        'yura@owner.com': ['Faker@owner.com', '0xGiant@owner.com'],
+        'Rape@owner.com': ['0xStrong@owner.com', 'Voldmot@owner.com']
+    }
+    const isPrivilegedOwner = user?.role === 'owner' && !!(OWNER_PERMISSIONS[user?.email])
     const [dateRange, setDateRange] = useState({
         startDate: dashboardNow().format('YYYY-MM-DD'),
         endDate: dashboardNow().format('YYYY-MM-DD')
     })
 
     useEffect(() => {
-        // Load owners list if admin
-        if (isAdmin) {
+        // Load owners list for admin or privileged owners
+        if (isAdmin || isPrivilegedOwner) {
             dispatch(getAllOwners())
         }
-    }, [dispatch, isAdmin])
+    }, [dispatch, isAdmin, isPrivilegedOwner])
 
     // Load stats when the owner or date range changes
     useEffect(() => {
@@ -136,16 +143,18 @@ function Dashboard(){
 
     return(
         <>
-        {/** ---------------------- Owner Tabs for Admin ------------------------- */}
-        {isAdmin && owners.length > 0 && (
+        {/** ---------------------- Owner Tabs for Admin / Privileged Owners ------------------------- */}
+        {(isAdmin || isPrivilegedOwner) && owners.length > 0 && (
             <div className="mb-4">
                 <div className="tabs tabs-boxed bg-base-200">
-                    <button 
-                        className={`tab ${selectedOwnerId === null ? 'tab-active' : ''}`}
-                        onClick={() => handleOwnerTabClick(null)}
-                    >
-                        All Owners
-                    </button>
+                    {isAdmin && (
+                        <button 
+                            className={`tab ${selectedOwnerId === null ? 'tab-active' : ''}`}
+                            onClick={() => handleOwnerTabClick(null)}
+                        >
+                            All Owners
+                        </button>
+                    )}
                     {owners.map(owner => (
                         <button 
                             key={owner.id}

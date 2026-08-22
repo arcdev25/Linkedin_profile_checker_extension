@@ -1,9 +1,16 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import { supabase } from '../../app/supabaseClient'
 import moment from 'moment'
+import { getAccessibleOwnerIds } from '../../utils/ownerPermissions'
 
 const DASHBOARD_TIMEZONE_OFFSET = 180
 const DASHBOARD_TIMEZONE = '+03:00'
+
+// Owner permission mapping - defines which owners can see other owners' data
+const OWNER_PERMISSIONS = {
+    'yura@owner.com': ['Faker@owner.com', '0xGiant@owner.com'],
+    'Rape@owner.com': ['0xStrong@owner.com', 'Voldmot@owner.com']
+}
 
 const formatDate = (value) => {
     if (!value) return null
@@ -53,12 +60,47 @@ export const getDashboardStats = createAsyncThunk('/dashboard/stats', async (par
     const endDate = formatDate(dateRange?.endDate)
     const isAdmin = user?.role === 'admin'
 
-    // Determine which owner's data to fetch. Admins can pass null for all owners.
-    let targetOwnerId = isAdmin ? ownerId : user?.id
+    // Get all owners for permission checking
+    const { data: allOwners, error: ownersError } = await supabase
+        .from('owners')
+        .select('id, email, name, role')
+        .eq('role', 'owner')
     
-    // If user is owner (not admin), always use their own ID
-    if (user?.role === 'owner') {
-        targetOwnerId = user.id
+    if (ownersError) throw ownersError
+
+    // Determine which owner's data to fetch based on permissions
+    let targetOwnerIds = []
+    
+    if (isAdmin) {
+        // Admin can access all owners or specific owner if provided
+        if (ownerId) {
+            targetOwnerIds = [ownerId]
+        }
+        // If no ownerId provided, targetOwnerIds remains empty (fetch all)
+    } else {
+        // Non-admin: get accessible owner IDs based on permissions
+        const accessibleOwnerIds = getAccessibleOwnerIds(user, allOwners)
+        
+        if (ownerId && accessibleOwnerIds.includes(ownerId)) {
+            // Specific owner requested and user has access
+            targetOwnerIds = [ownerId]
+        } else if (ownerId && !accessibleOwnerIds.includes(ownerId)) {
+            // Requested owner but no access - return empty data
+            return {
+                totalProfiles: 0,
+                totalContacts: 0,
+                totalRecruiters: 0,
+                lastContactDate: null,
+                statusCounts: {},
+                statusBreakdown: {},
+                recruiterStats: [],
+                dailyStats: [],
+                recentContacts: []
+            }
+        } else {
+            // No specific owner requested - use all accessible owners
+            targetOwnerIds = accessibleOwnerIds
+        }
     }
 
     let recruitersQuery = supabase
@@ -66,8 +108,9 @@ export const getDashboardStats = createAsyncThunk('/dashboard/stats', async (par
         .select('*')
         .is('deleted_at', null)   // exclude soft-deleted recruiters
     
-    if (targetOwnerId) {
-        recruitersQuery = recruitersQuery.eq('owner_id', targetOwnerId)
+    // Apply owner filter based on permissions
+    if (targetOwnerIds.length > 0) {
+        recruitersQuery = recruitersQuery.in('owner_id', targetOwnerIds)
     }
 
     const recruitersResult = await recruitersQuery
@@ -78,12 +121,15 @@ export const getDashboardStats = createAsyncThunk('/dashboard/stats', async (par
 
     // Helper to apply owner filter to a query
     const applyOwnerFilter = (query) => {
-        if (targetOwnerId) {
-            const ownerFilter = [`owner_id.eq.${targetOwnerId}`]
+        if (targetOwnerIds.length > 0) {
+            const ownerFilter = [`owner_id.in.(${targetOwnerIds.join(',')})`]
             if (recruiterIds.length > 0) {
                 ownerFilter.push(`recruiter_id.in.(${recruiterIds.join(',')})`)
             }
             return query.or(ownerFilter.join(','))
+        } else if (recruiterIds.length > 0) {
+            // If no owner restrictions but have recruiters, filter by recruiters
+            return query.in('recruiter_id', recruiterIds)
         }
         return query
     }
@@ -222,16 +268,47 @@ export const getDashboardStats = createAsyncThunk('/dashboard/stats', async (par
     }
 })
 
-// Get all owners for admin tabs
-export const getAllOwners = createAsyncThunk('/dashboard/owners', async () => {
-    const { data, error } = await supabase
-        .from('owners')
-        .select('id, name, email, role')
-        .eq('role', 'owner')
-        .order('name', { ascending: true })
+// Get all owners for admin tabs (or owners with permissions)
+export const getAllOwners = createAsyncThunk('/dashboard/owners', async (_, { getState }) => {
+    const { auth } = getState()
+    const user = auth.user
+
+    if (user?.role === 'admin') {
+        // Admin sees all owners
+        const { data, error } = await supabase
+            .from('owners')
+            .select('id, name, email, role')
+            .eq('role', 'owner')
+            .order('name', { ascending: true })
+        
+        if (error) throw error
+        return data
+    } else if (user?.role === 'owner') {
+        // Check if owner has permission to see other owners
+        const allowedEmails = OWNER_PERMISSIONS[user.email] || []
+        
+        if (allowedEmails.length > 0) {
+            // Get self + allowed owners
+            const { data, error } = await supabase
+                .from('owners')
+                .select('id, name, email, role')
+                .or(`id.eq.${user.id},email.in.(${allowedEmails.map(e => `"${e}"`).join(',')})`)
+                .order('name', { ascending: true })
+            
+            if (error) throw error
+            return data
+        } else {
+            // Regular owner - only return self
+            return [{
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role
+            }]
+        }
+    }
     
-    if (error) throw error
-    return data
+    return []
 })
 
 export const dashboardSlice = createSlice({
