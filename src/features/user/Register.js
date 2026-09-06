@@ -38,7 +38,7 @@ function Register(){
                 password: registerObj.password 
             })).unwrap()
             
-            dispatch(showNotification({message : "Registration successful! Please login.", status : 1}))
+            dispatch(showNotification({message : "Registration successful! Your account is pending admin approval.", status : 1}))
             navigate('/login')
         } catch (error) {
             setErrorMessage(error.message || 'Registration failed')

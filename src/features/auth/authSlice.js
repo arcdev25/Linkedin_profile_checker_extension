@@ -15,9 +15,9 @@ export const loginUser = createAsyncThunk('/auth/login', async ({ email, passwor
         throw new Error('Invalid email or password')
     }
 
-    // Check if user is disabled
+    // Check if user is disabled / pending approval
     if (users.status === 'disabled') {
-        throw new Error('Your account has been disabled. Please contact admin.')
+        throw new Error('Your account is pending admin approval. Please contact the admin.')
     }
 
     // Verify password
@@ -38,13 +38,16 @@ export const loginUser = createAsyncThunk('/auth/login', async ({ email, passwor
 
 // Register (Owner signup)
 export const registerUser = createAsyncThunk('/auth/register', async ({ name, email, password }) => {
-    // Check if email already exists
-    const { data: existing } = await supabase
+    // Check if email already exists — use maybeSingle() so no error is thrown when not found
+    const { data: existing, error: checkError } = await supabase
         .from('owners')
         .select('email')
         .eq('email', email)
-        .single()
-    
+        .maybeSingle()
+
+    // A real DB error (not just "no rows found")
+    if (checkError) throw new Error(checkError.message)
+
     if (existing) {
         throw new Error('Email already exists')
     }
@@ -52,7 +55,7 @@ export const registerUser = createAsyncThunk('/auth/register', async ({ name, em
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    // Create new owner (status will be 'active' by default, but admin can disable)
+    // Create new owner — status starts as 'disabled' until admin approves
     const { data, error } = await supabase
         .from('owners')
         .insert([{
@@ -60,11 +63,12 @@ export const registerUser = createAsyncThunk('/auth/register', async ({ name, em
             email,
             password: hashedPassword,
             role: 'owner',
-            status: 'active'
+            status: 'disabled'
         }])
         .select()
-    
-    if (error) throw error
+
+    if (error) throw new Error(error.message)
+    if (!data || data.length === 0) throw new Error('Registration failed — no data returned')
 
     const { password: _, ...userWithoutPassword } = data[0]
     return userWithoutPassword
@@ -102,7 +106,7 @@ export const checkAuth = createAsyncThunk('/auth/check', async () => {
     if (data.status === 'disabled') {
         localStorage.removeItem('user')
         localStorage.removeItem('token')
-        throw new Error('Account disabled')
+        throw new Error('Your account is pending admin approval. Please contact the admin.')
     }
 
     // Update localStorage with fresh data
