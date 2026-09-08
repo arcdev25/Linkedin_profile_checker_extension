@@ -30,7 +30,7 @@ function ConnectActivityChart() {
   const { stats } = useSelector(state => state.dashboard)
 
   const contacts = stats.connectionActivity || []
-  const recruiters = stats.recruiterStats || []
+  const recruiters = stats.connectionRecruiters || []
 
   // recruiter_id -> member name
   const recruiterNameMap = {}

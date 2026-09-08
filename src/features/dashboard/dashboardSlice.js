@@ -119,6 +119,14 @@ export const getDashboardStats = createAsyncThunk('/dashboard/stats', async (par
     const recruiters = recruitersResult.data
     const recruiterIds = recruiters.map(recruiter => recruiter.id)
 
+    // Activity chart: all recruiter/member names are visible to everyone
+    const { data: allRecruiters, error: allRecruitersError } = await supabase
+        .from('recruiters')
+        .select('id, name')
+        .is('deleted_at', null)
+
+    if (allRecruitersError) throw allRecruitersError
+
     // Helper to apply owner filter to a query
     const applyOwnerFilter = (query) => {
         if (targetOwnerIds.length > 0) {
@@ -162,6 +170,21 @@ export const getDashboardStats = createAsyncThunk('/dashboard/stats', async (par
                 .gte('contacted_at', getTimezoneStartIso(startDate))
                 .lte('contacted_at', getTimezoneEndIso(endDate))
         }
+        return q
+    })
+
+    // Activity chart: every member can see every member's connection activity
+    const allConnectionActivity = await fetchAll(() => {
+        let q = supabase
+            .from('contacts')
+            .select('id, contacted_at, recruiter_id, owner_id')
+
+        if (startDate && endDate) {
+            q = q
+                .gte('contacted_at', getTimezoneStartIso(startDate))
+                .lte('contacted_at', getTimezoneEndIso(endDate))
+        }
+
         return q
     })
 
@@ -264,7 +287,8 @@ export const getDashboardStats = createAsyncThunk('/dashboard/stats', async (par
         statusBreakdown,
         recruiterStats,
         dailyStats,
-        connectionActivity: createdContacts,
+        connectionActivity: allConnectionActivity,
+        connectionRecruiters: allRecruiters,
         recentContacts: []
     }
 })
