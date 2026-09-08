@@ -9,6 +9,7 @@ import ExclamationTriangleIcon from '@heroicons/react/24/outline/ExclamationTria
 import CheckCircleIcon from '@heroicons/react/24/outline/CheckCircleIcon'
 import LineChart from './components/LineChart'
 import BarChart from './components/BarChart'
+import ConnectActivityChart from './components/ConnectActivityChart'
 import DashboardTopBar from './components/DashboardTopBar'
 import { useDispatch, useSelector } from 'react-redux'
 import {showNotification} from '../common/headerSlice'
@@ -180,6 +181,10 @@ function Dashboard(){
                         )
                     })
                 }
+            </div>
+        {/** ---------------------- 24 Hour Connect Activity ------------------------- */}
+            <div className="mt-4">
+                <ConnectActivityChart />
             </div>
 
         {/** ---------------------- Different charts ------------------------- */}

@@ -264,6 +264,7 @@ export const getDashboardStats = createAsyncThunk('/dashboard/stats', async (par
         statusBreakdown,
         recruiterStats,
         dailyStats,
+        connectionActivity: createdContacts,
         recentContacts: []
     }
 })
@@ -324,6 +325,7 @@ export const dashboardSlice = createSlice({
             statusBreakdown: {},
             recruiterStats: [],
             dailyStats: [],
+            connectionActivity: [],
             recentContacts: []
         },
         owners: [],
