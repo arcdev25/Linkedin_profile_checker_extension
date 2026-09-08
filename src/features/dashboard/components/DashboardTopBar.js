@@ -96,6 +96,38 @@ function DashboardTopBar({dateRange, updateDashboardPeriod}){
         updateDashboardPeriod(dateValue)
     }
 
+    const handlePreviousDay = () => {
+        const currentDate = moment(dateValue.startDate, 'YYYY-MM-DD')
+        const previousDate = currentDate.subtract(1, 'day').format('YYYY-MM-DD')
+
+        const newDateValue = {
+            startDate: previousDate,
+            endDate: previousDate
+        }
+
+        setActivePreset(null)
+        setDateValue(newDateValue)
+        updateDashboardPeriod(newDateValue)
+    }
+
+    const handleNextDay = () => {
+        const currentDate = moment(dateValue.startDate, 'YYYY-MM-DD')
+        const nextDate = currentDate.add(1, 'day')
+
+        const today = dashboardNow().startOf('day')
+
+        if (nextDate.isAfter(today, 'day')) return
+
+        const newDateValue = {
+            startDate: nextDate.format('YYYY-MM-DD'),
+            endDate: nextDate.format('YYYY-MM-DD')
+        }
+
+        setActivePreset(null)
+        setDateValue(newDateValue)
+        updateDashboardPeriod(newDateValue)
+    }
+
     return(
         <div className="mb-4">
             {/* Date Filter Buttons */}
@@ -141,6 +173,23 @@ function DashboardTopBar({dateRange, updateDashboardPeriod}){
                     aria-pressed={activePreset === 'lastMonth'}
                 >
                     Last Month
+                </button>
+                <button
+                    className="btn btn-sm btn-outline"
+                    onClick={handlePreviousDay}
+                >
+                    ← Previous
+                </button>
+
+                <button
+                    className="btn btn-sm btn-outline"
+                    onClick={handleNextDay}
+                    disabled={moment(dateValue.startDate, 'YYYY-MM-DD').isSameOrAfter(
+                        dashboardNow(),
+                        'day'
+                    )}
+                >
+                    Next →
                 </button>
             </div>
 
