@@ -49,9 +49,9 @@ function MonthlyTeamBattle({
             battle?.type !== "weekly"
     ).length
 
-    const strongWins = Object.values(battleHistory).filter(
+    const rapeWins = Object.values(battleHistory).filter(
         (battle) =>
-            getWinner(battle) === "0xStrong" &&
+            getWinner(battle) === "Rape" &&
             battle?.type !== "weekly"
     ).length
 
@@ -153,7 +153,7 @@ function MonthlyTeamBattle({
                                                 {battle?.type === "weekly" ? "🏆" : "👑"}
                                             </span>
                                         )}
-                                        {winner === "0xStrong" && (
+                                        {winner === "Rape" && (
                                             <span
                                                 className="
                                                     inline-flex
@@ -215,12 +215,12 @@ function MonthlyTeamBattle({
 
                                                 <div className="flex justify-between mt-1">
                                                     <span className="text-pink-300">
-                                                        0xStrong
+                                                        Rape
                                                     </span>
 
                                                     <span className="font-bold">
                                                         {Number(
-                                                            battle.strongScore
+                                                            battle.rapeScore
                                                         ).toFixed(2)}
                                                     </span>
                                                 </div>
@@ -242,7 +242,7 @@ function MonthlyTeamBattle({
 
                         <tr>
                             <td className="w-28 font-bold text-error text-xs text-left">
-                                0xStrong Team
+                                Rape Team
                             </td>
 
                             {days.map((day) => {
@@ -256,7 +256,7 @@ function MonthlyTeamBattle({
                                         onMouseEnter={() =>
                                             setHoveredBattle({
                                                 day,
-                                                team: "0xStrong",
+                                                team: "Rape",
                                                 battle
                                             })
                                         }
@@ -264,7 +264,7 @@ function MonthlyTeamBattle({
                                             setHoveredBattle(null)
                                         }
                                     >
-                                        {winner === "0xStrong" && (
+                                        {winner === "Rape" && (
                                             <span
                                                 className="
                                                     inline-flex
@@ -291,7 +291,7 @@ function MonthlyTeamBattle({
                                             </span>
                                         )}
                                         {hoveredBattle?.day === day &&
-                                            hoveredBattle?.team === "0xStrong" &&
+                                            hoveredBattle?.team === "Rape" &&
                                             battle && (
                                             <div
                                                 className="
@@ -339,12 +339,12 @@ function MonthlyTeamBattle({
 
                                                 <div className="flex justify-between mt-1">
                                                     <span className="text-pink-300">
-                                                        0xStrong
+                                                        Rape
                                                     </span>
 
                                                     <span className="font-bold">
                                                         {Number(
-                                                            battle.strongScore
+                                                            battle.rapeScore
                                                         ).toFixed(2)}
                                                     </span>
                                                 </div>
@@ -360,7 +360,7 @@ function MonthlyTeamBattle({
                             })}
 
                             <td className="w-12 font-bold text-success text-sm">
-                                {strongWins}
+                                {rapeWins}
                             </td>
                         </tr>
                     </tbody>

@@ -213,7 +213,7 @@ function ReportTable({
 
                                 <td>
                                     <input
-                                        className="input input-sm input-bordered w-28"
+                                        className="input input-sm input-bordered w-12"
                                         value={report.note}
                                         onChange={(e) => handleChange(report.userId, "note", e.target.value)}
                                         disabled={!canEdit}

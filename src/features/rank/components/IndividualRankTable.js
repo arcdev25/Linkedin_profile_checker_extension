@@ -181,7 +181,7 @@ function IndividualRankTable({
 
                     <thead className="bg-base-300/40">
                         <tr>
-                            <th className="w-40 py-3 text-sm">User</th>
+                            <th className="w-52 py-3 text-sm">User</th>
 
                             {days.map((day) => {
                                 const disabled = isFutureDay(day)
@@ -250,7 +250,7 @@ function IndividualRankTable({
                                             />
 
                                             <div className="text-left">
-                                                <div className="font-extrabold text-base">
+                                                <div className="font-extrabold text-base whitespace-nowrap">
                                                     {user.name}
                                                 </div>
 

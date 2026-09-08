@@ -77,12 +77,12 @@ function TotalRank(){
         Yura: "/Yura.png",
         Faker: "/Faker.png",
         "0xGiant": "/0xGiant.png",
-        "0xStrong": "/0xStrong.png",
         Voldmot: "/Voldmot.png",
-        Rape: "/Rape.png"
+        Rape: "/Rape.png",
+        "Myron D Porter": "/Myron D Porter.png"
     }
 
-    const bossUsers = ["Yura", "0xStrong"]
+    const bossUsers = ["Yura", "Rape"]
 
     const calculateScore = (item) => {
 
@@ -348,40 +348,40 @@ function TotalRank(){
                         weeklyScoreMap[weekKey] = {
                             sunday: sundayDay,
                             yuraScore: 0,
-                            strongScore: 0
+                            rapeScore: 0
                         }
                     }
 
                     weeklyScoreMap[weekKey].yuraScore += teamAScore
-                    weeklyScoreMap[weekKey].strongScore += teamBScore
+                    weeklyScoreMap[weekKey].rapeScore += teamBScore
                 }
             }
             if (reportsOfDay.length === 0 || (teamAScore === 0 && teamBScore === 0)) {
                 monthlyHistory[day] = {
                     winner: "none",
                     yuraScore: 0,
-                    strongScore: 0,
+                    rapeScore: 0,
                     type: "daily"
                 }
             } else if (teamAScore > teamBScore) {
                 monthlyHistory[day] = {
                     winner: "Yura",
                     yuraScore: teamAScore,
-                    strongScore: teamBScore,
+                    rapeScore: teamBScore,
                     type: "daily"
                 }
             } else if (teamBScore > teamAScore) {
                 monthlyHistory[day] = {
-                    winner: "0xStrong",
+                    winner: "Rape",
                     yuraScore: teamAScore,
-                    strongScore: teamBScore,
+                    rapeScore: teamBScore,
                     type: "daily"
                 }
             } else {
                 monthlyHistory[day] = {
                     winner: "draw",
                     yuraScore: teamAScore,
-                    strongScore: teamBScore,
+                    rapeScore: teamBScore,
                     type: "daily"
                 }
             }
@@ -390,32 +390,32 @@ function TotalRank(){
 
             if (!week.sunday) return
 
-            if (week.yuraScore === 0 && week.strongScore === 0) {
+            if (week.yuraScore === 0 && week.rapeScore === 0) {
                 monthlyHistory[week.sunday] = {
                     winner: "none",
                     yuraScore: 0,
-                    strongScore: 0,
+                    rapeScore: 0,
                     type: "weekly"
                 }
-            } else if (week.yuraScore > week.strongScore) {
+            } else if (week.yuraScore > week.rapeScore) {
                 monthlyHistory[week.sunday] = {
                     winner: "Yura",
                     yuraScore: week.yuraScore,
-                    strongScore: week.strongScore,
+                    rapeScore: week.rapeScore,
                     type: "weekly"
                 }
-            } else if (week.strongScore > week.yuraScore) {
+            } else if (week.rapeScore > week.yuraScore) {
                 monthlyHistory[week.sunday] = {
-                    winner: "0xStrong",
+                    winner: "Rape",
                     yuraScore: week.yuraScore,
-                    strongScore: week.strongScore,
+                    rapeScore: week.rapeScore,
                     type: "weekly"
                 }
             } else {
                 monthlyHistory[week.sunday] = {
                     winner: "draw",
                     yuraScore: week.yuraScore,
-                    strongScore: week.strongScore,
+                    rapeScore: week.rapeScore,
                     type: "weekly"
                 }
             }
@@ -440,9 +440,9 @@ function TotalRank(){
     ]
 
     const teamB = [
-        "0xStrong",
+        "Rape",
         "Voldmot",
-        "Rape"
+        "Myron D Porter"
     ]
 
     const teamAUsers = rankData.filter(user =>
@@ -487,13 +487,13 @@ function TotalRank(){
             ? null
             : teamAScore > teamBScore
                 ? "Yura"
-                : "0xStrong"
+                : "Rape"
 
     const loserBoss =
         isDrawOrNoData
             ? null
             : teamAScore > teamBScore
-                ? "0xStrong"
+                ? "Rape"
                 : "Yura"
 
     winnerTeam.sort((a, b) => {
@@ -571,8 +571,8 @@ function TotalRank(){
                     src={
                         winnerBoss === "Yura"
                             ? "/Yura_win.png"
-                            : winnerBoss === "0xStrong"
-                                ? "/0xStrong_win.png"
+                            : winnerBoss === "Rape"
+                                ? "/Rape_win.png"
                                 : "/draw.png"
                     }
                     alt="Team Battle"

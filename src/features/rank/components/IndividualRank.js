@@ -34,9 +34,9 @@ function IndividualRank() {
         Yura: "/Yura.png",
         Faker: "/Faker.png",
         "0xGiant": "/0xGiant.png",
-        "0xStrong": "/0xStrong.png",
         Voldmot: "/Voldmot.png",
-        Rape: "/Rape.png"
+        Rape: "/Rape.png",
+        "Myron D Porter": "/Myron D Porter.png"
     }
 
     const calculateMetricScore = (item, metric) => {
@@ -186,11 +186,11 @@ function IndividualRank() {
 
             })
             const fixedUserOrder = [
-                "0xStrong",
+                "Rape",
                 "Yura",
                 "Voldmot",
                 "Faker",
-                "Rape",
+                "Myron D Porter",
                 "0xGiant",
             ]
 
