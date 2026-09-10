@@ -122,7 +122,7 @@ export const getDashboardStats = createAsyncThunk('/dashboard/stats', async (par
     // Activity chart: all recruiter/member names are visible to everyone
     const { data: allRecruiters, error: allRecruitersError } = await supabase
         .from('recruiters')
-        .select('id, name')
+        .select('id, name, company')
         .is('deleted_at', null)
 
     if (allRecruitersError) throw allRecruitersError

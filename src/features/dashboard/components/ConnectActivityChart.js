@@ -113,6 +113,12 @@ function ConnectActivityChart() {
 
         const activeHours = hourlyBuckets.filter(count => count > 0).length
         const totalConnections = times.length
+        const lowVolumeMultiplier =
+          totalConnections <= 5
+            ? 0.25
+            : totalConnections <= 10
+              ? 0.5
+              : 1
 
         const maxHourlyConnections = Math.max(...hourlyBuckets)
 
@@ -139,18 +145,15 @@ function ConnectActivityChart() {
 
         // Penalize heavy concentration in a single hour
         if (busiestHourShare >= 0.5) {
-        score -= 20
+          score -= 20 * lowVolumeMultiplier
         } else if (busiestHourShare >= 0.35) {
-        score -= 12
+          score -= 12 * lowVolumeMultiplier
         } else if (busiestHourShare >= 0.25) {
-        score -= 6
+          score -= 6 * lowVolumeMultiplier
         }
 
-        // Strong short burst penalty
-        score -= Math.max(0, max10MinBurst - 2) * 4
-
-        // Sustained hourly burst penalty
-        score -= Math.max(0, max60MinBurst - 10) * 1.5
+        score -= Math.max(0, max10MinBurst - 2) * 4 * lowVolumeMultiplier
+        score -= Math.max(0, max60MinBurst - 10) * 1.5 * lowVolumeMultiplier
 
         // Concentrated activity penalty
         if (totalConnections >= 20) {
@@ -193,18 +196,102 @@ function ConnectActivityChart() {
   const contacts = stats.connectionActivity || []
   const recruiters = stats.connectionRecruiters || []
 
+  const stabilityByAccount = {}
+  
+
+    recruiters.forEach(recruiter => {
+      const accountContacts = contacts.filter(
+        contact => contact.recruiter_id === recruiter.id
+      )
+
+      stabilityByAccount[recruiter.id] = {
+        recruiterId: recruiter.id,
+        memberName: recruiter.name,
+        accountName: recruiter.company || 'Unknown Account',
+        ...calculateStability(accountContacts)
+      }
+  })
+
+  const accountsNeedingAttention = Object.values(stabilityByAccount)
+  .filter(account =>
+    account.score !== null &&
+    account.totalConnections >= 10 &&
+    account.score < 70
+  )
+  .sort((a, b) => a.score - b.score)
+
   const stabilityByMember = {}
 
     MEMBER_ORDER.forEach(memberName => {
-    const memberRecruiterIds = recruiters
-        .filter(recruiter => recruiter.name === memberName)
-        .map(recruiter => recruiter.id)
+      const memberAccounts = Object.values(stabilityByAccount)
+        .filter(account => account.memberName === memberName)
 
-    const memberContacts = contacts.filter(contact =>
-        memberRecruiterIds.includes(contact.recruiter_id)
-    )
+      const activeAccounts = memberAccounts
+        .filter(account => account.score !== null)
 
-    stabilityByMember[memberName] = calculateStability(memberContacts)
+      if (activeAccounts.length === 0) {
+        stabilityByMember[memberName] = {
+          score: null,
+          level: 'No Activity',
+          totalConnections: 0,
+          activeAccounts: 0,
+          weakestAccount: null
+        }
+
+        return
+      }
+
+      const totalConnections = activeAccounts.reduce(
+        (sum, account) => sum + account.totalConnections,
+        0
+      )
+
+      const weightedAverageScore =
+        activeAccounts.reduce(
+          (sum, account) =>
+            sum + account.score * Math.max(account.totalConnections, 1),
+          0
+        ) /
+        activeAccounts.reduce(
+          (sum, account) => sum + Math.max(account.totalConnections, 1),
+          0
+        )
+
+      const weakestAccount = activeAccounts.reduce(
+        (weakest, account) =>
+          account.score < weakest.score ? account : weakest
+      )
+
+      // Member score:
+      // 75% overall account performance
+      // 25% weakest active account
+      const busiestAccount = activeAccounts.reduce(
+        (busiest, account) =>
+          account.totalConnections > busiest.totalConnections
+            ? account
+            : busiest
+      )
+
+      const memberScore = Math.round(
+        weightedAverageScore * 0.6 +
+        weakestAccount.score * 0.2 +
+        busiestAccount.score * 0.2
+      )
+
+      let level = 'Very Stable'
+
+      if (memberScore < 30) level = 'Very High Risk'
+      else if (memberScore < 50) level = 'High Risk'
+      else if (memberScore < 70) level = 'Elevated'
+      else if (memberScore < 85) level = 'Stable'
+
+      stabilityByMember[memberName] = {
+        score: memberScore,
+        level,
+        totalConnections,
+        activeAccounts: activeAccounts.length,
+        weakestAccount
+      }
     })
 
   // recruiter_id -> member name
@@ -251,6 +338,7 @@ function ConnectActivityChart() {
         x: businessHour,
         y: memberIndex,
         memberName,
+        recruiterId: contact.recruiter_id,
         contactedAt: contact.contacted_at
       }
     })
@@ -287,22 +375,34 @@ function ConnectActivityChart() {
         callbacks: {
           title: () => '',
           label: (context) => {
-                const point = context.raw
-                const stability = stabilityByMember[point.memberName]
+            const point = context.raw
 
-                return [
-                    `${point.memberName} — ${moment(point.contactedAt).format('HH:mm:ss')}`,
-                    stability?.score === null
-                        ? `Stability: N/A (No Activity)`
-                        : `Stability: ${stability.score}/100 (${stability.level})`,
-                    `Total connects: ${stability?.totalConnections ?? 0}`,
-                    `Active hours: ${stability?.activeHours ?? 0}`,
-                    `Max in 10 min: ${stability?.max10MinBurst ?? 0}`,
-                    `Max in 60 min: ${stability?.max60MinBurst ?? 0}`,
-                    `Busiest hour: ${stability?.maxHourlyConnections ?? 0}`,
-                    `Busiest hour share: ${Math.round((stability?.busiestHourShare ?? 0) * 100)}%`
-                ]
+            const account = stabilityByAccount[point.recruiterId]
+
+            if (!account) {
+              return [
+                `${point.memberName} — ${moment(point.contactedAt).format('HH:mm:ss')}`
+              ]
             }
+
+            return [
+              `${point.memberName} — ${account.accountName}`,
+              `Sent at: ${moment(point.contactedAt).format('HH:mm:ss')}`,
+
+              account.score === null
+                ? `Account Stability: N/A`
+                : `Account Stability: ${account.score}/100 (${account.level})`,
+
+              `Account connects: ${account.totalConnections}`,
+              `Active hours: ${account.activeHours}`,
+              `Max in 10 min: ${account.max10MinBurst}`,
+              `Max in 60 min: ${account.max60MinBurst}`,
+              `Busiest hour: ${account.maxHourlyConnections ?? 0}`,
+              `Busiest hour share: ${Math.round(
+                (account.busiestHourShare ?? 0) * 100
+              )}%`
+            ]
+          }
         }
       }
     },
@@ -357,7 +457,13 @@ function ConnectActivityChart() {
                         return `⚪ ${memberName} — N/A · No Activity · 0 connects`
                     }
 
-                    return `${getStabilityEmoji(stability.score)} ${memberName} — ${stability.score}/100 · ${stability.level} · ${stability.totalConnections} connects`
+                    const weakestAccountName =
+                      stability.weakestAccount?.accountName || 'N/A'
+
+                    const busiestAccountName =
+                      stability.busiestAccount?.accountName || 'N/A'
+
+                    return `${getStabilityEmoji(stability.score)} ${memberName} — ${stability.score}/100 · ${stability.level} · ${stability.totalConnections} connects · ${stability.activeAccounts} accounts · Busiest: ${busiestAccountName} · Weakest: ${weakestAccountName}`
                 },
                 padding: 10
             },
@@ -403,6 +509,81 @@ function ConnectActivityChart() {
           data={data}
           options={options}
         />
+      </div>
+      {accountsNeedingAttention.length > 0 && (
+        <div className="mb-6">
+          <div className="font-semibold mb-3">
+            Accounts Needing Attention
+          </div>
+
+          <div className="space-y-2">
+            {accountsNeedingAttention.map(account => (
+              <div
+                key={account.recruiterId}
+                className="border rounded-lg p-3 text-sm"
+              >
+                <div className="font-semibold">
+                  {getStabilityEmoji(account.score)} {account.memberName} — {account.accountName}
+                </div>
+
+                <div className="mt-1">
+                  {account.score}/100 · {account.level}
+                </div>
+
+                <div className="text-xs opacity-70 mt-1">
+                  {account.totalConnections} connects ·
+                  Max 10 min: {account.max10MinBurst} ·
+                  Max 60 min: {account.max60MinBurst}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      <div className="mt-6">
+        <div className="font-semibold mb-3">
+          LinkedIn Account Stability
+        </div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {Object.values(stabilityByAccount)
+            .filter(account => account.score !== null)
+            .sort((a, b) => a.score - b.score)
+            .map(account => (
+              <div
+                key={account.recruiterId}
+                className="border rounded-lg p-3 text-sm"
+              >
+                <div className="font-semibold">
+                  {getStabilityEmoji(account.score)} {account.memberName}
+                </div>
+
+                <div className="text-xs opacity-70 mt-1">
+                  {account.accountName}
+                </div>
+
+                <div className="mt-2">
+                  Stability: {account.score}/100 · {account.level}
+                </div>
+
+                <div>
+                  Connects: {account.totalConnections}
+                </div>
+
+                <div>
+                  Active hours: {account.activeHours}
+                </div>
+
+                <div>
+                  Max 10 min: {account.max10MinBurst}
+                </div>
+
+                <div>
+                  Max 60 min: {account.max60MinBurst}
+                </div>
+              </div>
+            ))}
+        </div>
       </div>
     </TitleCard>
   )
