@@ -5,8 +5,8 @@ import { supabase } from "../../../app/supabaseClient"
 
 function IndividualRank() {
     const [activeMetric, setActiveMetric] = useState("total")
-    const [selectedMonth, setSelectedMonth] = useState(4)
-    const [selectedYear, setSelectedYear] = useState(2026)
+    const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth())
+    const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear())
     const [loading, setLoading] = useState(false)
     const [users, setUsers] = useState([])
 

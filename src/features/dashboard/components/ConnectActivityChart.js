@@ -488,6 +488,18 @@ function ConnectActivityChart() {
         )
     : null
 
+    const accountsByMember = MEMBER_ORDER.reduce((result, memberName) => {
+      result[memberName] = Object.values(stabilityByAccount)
+        .filter(
+          account =>
+            account.memberName === memberName &&
+            account.score !== null
+        )
+        .sort((a, b) => a.score - b.score)
+
+      return result
+    }, {})
+
   return (
     <TitleCard title="24 Hour LinkedIn Connect Activity">
         {lowestStability && (
@@ -540,7 +552,7 @@ function ConnectActivityChart() {
           </div>
         </div>
       )}
-      <div className="mt-6">
+      {/* <div className="mt-6">
         <div className="font-semibold mb-3">
           LinkedIn Account Stability
         </div>
@@ -584,7 +596,106 @@ function ConnectActivityChart() {
               </div>
             ))}
         </div>
-      </div>
+      </div> */}
+      <div className="mt-6">
+  <div className="font-semibold text-lg mb-4">
+    LinkedIn Account Stability
+  </div>
+
+  <div className="space-y-5">
+    {MEMBER_ORDER.map(memberName => {
+      const accounts = accountsByMember[memberName] || []
+      const member = stabilityByMember[memberName]
+
+      if (accounts.length === 0) return null
+
+      return (
+        <div
+          key={memberName}
+          className="rounded-xl border border-base-300 overflow-hidden"
+        >
+          {/* MEMBER HEADER */}
+          <div className="flex items-center justify-between px-5 py-4 bg-base-200">
+            <div className="font-bold text-base">
+              {getStabilityEmoji(member?.score)} {memberName}
+            </div>
+
+            <div className="flex gap-5 text-sm">
+              <span>
+                Stability:
+                <b className="ml-1">
+                  {member?.score ?? 'N/A'}/100
+                </b>
+              </span>
+
+              <span>
+                {accounts.length} Accounts
+              </span>
+
+              <span>
+                {member?.totalConnections ?? 0} Connects
+              </span>
+            </div>
+          </div>
+
+          {/* ACCOUNTS */}
+          <div className="overflow-x-auto">
+            <table className="table w-full">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Account</th>
+                  <th>Stability</th>
+                  <th>Connects</th>
+                  <th>Active Hours</th>
+                  <th>Max 10 Min</th>
+                  <th>Max 60 Min</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {accounts.map((account, index) => (
+                  <tr key={account.recruiterId}>
+                    <td>
+                      {index + 1}
+                    </td>
+
+                    <td className="font-medium">
+                      {account.accountName}
+                    </td>
+
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <span>
+                          {getStabilityEmoji(account.score)}
+                        </span>
+
+                        <span className="font-semibold">
+                          {account.score}/100
+                        </span>
+
+                        <progress
+                          className="progress w-20"
+                          value={account.score}
+                          max="100"
+                        />
+                      </div>
+                    </td>
+
+                    <td>{account.totalConnections}</td>
+                    <td>{account.activeHours}</td>
+                    <td>{account.max10MinBurst}</td>
+                    <td>{account.max60MinBurst}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )
+    })}
+  </div>
+</div>
     </TitleCard>
   )
 }
