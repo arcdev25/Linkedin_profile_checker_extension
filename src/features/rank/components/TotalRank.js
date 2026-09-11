@@ -79,7 +79,7 @@ function TotalRank(){
         "0xGiant": "/0xGiant.png",
         Voldmot: "/Voldmot.png",
         Rape: "/Rape.png",
-        "Myron D Porter": "/Myron D Porter.png"
+        "Minato": "/Myron D Porter.png"
     }
 
     const bossUsers = ["Yura", "Rape"]
@@ -442,7 +442,7 @@ function TotalRank(){
     const teamB = [
         "Rape",
         "Voldmot",
-        "Myron D Porter"
+        "Minato"
     ]
 
     const teamAUsers = rankData.filter(user =>

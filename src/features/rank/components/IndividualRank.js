@@ -36,7 +36,7 @@ function IndividualRank() {
         "0xGiant": "/0xGiant.png",
         Voldmot: "/Voldmot.png",
         Rape: "/Rape.png",
-        "Myron D Porter": "/Myron D Porter.png"
+        "Minato": "/Myron D Porter.png"
     }
 
     const calculateMetricScore = (item, metric) => {
@@ -190,7 +190,7 @@ function IndividualRank() {
                 "Yura",
                 "Voldmot",
                 "Faker",
-                "Myron D Porter",
+                "Minato",
                 "0xGiant",
             ]
 
