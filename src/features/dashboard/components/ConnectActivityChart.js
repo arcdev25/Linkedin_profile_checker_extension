@@ -23,7 +23,7 @@ const MEMBER_ORDER = [
   '0xGiant',
   'Rape',
   'Voldmot',
-  'Myron D Porter'
+  'Minato'
 ]
 
 const getStabilityEmoji = (score) => {
