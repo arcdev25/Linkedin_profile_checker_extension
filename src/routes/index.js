@@ -14,6 +14,7 @@ const ProfileSettings = lazy(() => import('../pages/protected/ProfileSettings'))
 const Accounts = lazy(() => import('../pages/protected/Accounts'))
 const Owners = lazy(() => import('../pages/protected/Owners'))
 const DailyReport = lazy(() => import('../pages/protected/DailyReport'))
+const Calendar = lazy(() => import('../pages/protected/Calendar'))
 const Rank = lazy(() => import('../pages/protected/Rank'))
 const ConversionRate = lazy(() => import('../pages/protected/ConversionRate'))
 
@@ -66,9 +67,13 @@ const routes = [
     path: '/daily-report',
     component: DailyReport,
   },
-  {
+    {
     path: '/rank',
     component: Rank
+  },
+  {
+    path: '/calendar',
+    component: Calendar,
   },
   {
     path: '/conversion-rate',

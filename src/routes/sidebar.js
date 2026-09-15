@@ -7,6 +7,7 @@ import XCircleIcon from '@heroicons/react/24/outline/XCircleIcon'
 import { ClipboardDocumentListIcon } from '@heroicons/react/24/outline'
 import { ChartBarIcon } from '@heroicons/react/24/outline'
 import { ChartPieIcon } from '@heroicons/react/24/outline'
+import CalendarDaysIcon from '@heroicons/react/24/outline/CalendarDaysIcon'
 
 const iconClasses = `h-6 w-6`
 
@@ -43,10 +44,15 @@ const routes = [
     icon: <ClipboardDocumentListIcon className={iconClasses} />,
     name: 'Daily Report',
   },
-  {
+    {
       path: '/app/rank',
       icon: <ChartBarIcon className={iconClasses} />,
       name: 'Ranking',
+  },
+  {
+    path: '/app/calendar',
+    icon: <CalendarDaysIcon className={iconClasses} />,
+    name: 'Calendar',
   },
   {
       path: '/app/conversion-rate',
