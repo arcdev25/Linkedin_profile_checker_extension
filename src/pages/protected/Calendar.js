@@ -95,19 +95,24 @@ const Calendar = () => {
   // Find conflicts ONLY inside visible calendar range
   // AND only between DIFFERENT members
   // ------------------------------------------------
-  const [conflictPairs, setConflictPairs] = useState([])
-  const visibleConflictIds = useMemo(() => {
+  const {
+    conflictIds: visibleConflictIds,
+    pairs: calculatedConflictPairs,
+  } = useMemo(() => {
 
     const conflictIds = new Set()
-
     const pairs = []
 
     if (!visibleRange) {
-      return conflictIds
+      return { conflictIds, pairs }
     }
 
+    const now = new Date()
+    console.log('NOW:', now, now.toISOString())
 
-    // Only events that intersect the visible calendar range
+    // Only events that:
+    // 1. intersect the visible calendar range
+    // 2. have NOT already ended
     const visibleEvents = rawEvents.filter((event) => {
 
       const start = new Date(event.start_time)
@@ -115,10 +120,10 @@ const Calendar = () => {
 
       return (
         start < visibleRange.end &&
-        end > visibleRange.start
+        end > visibleRange.start &&
+        end > now
       )
     })
-
 
     // Compare every event with every other event
     for (let i = 0; i < visibleEvents.length; i++) {
@@ -128,12 +133,10 @@ const Calendar = () => {
         const eventA = visibleEvents[i]
         const eventB = visibleEvents[j]
 
-
         // Same member = NOT a team conflict
         if (eventA.member_name === eventB.member_name) {
           continue
         }
-
 
         const startA = new Date(eventA.start_time)
         const endA = new Date(eventA.end_time)
@@ -141,39 +144,38 @@ const Calendar = () => {
         const startB = new Date(eventB.start_time)
         const endB = new Date(eventB.end_time)
 
-
         const overlaps =
           startA < endB &&
           startB < endA
 
-
         if (overlaps) {
 
-            conflictIds.add(
-                `${eventA.member_name}-${eventA.google_event_id}`
-            )
+          conflictIds.add(
+            `${eventA.member_name}-${eventA.google_event_id}`
+          )
 
-            conflictIds.add(
-                `${eventB.member_name}-${eventB.google_event_id}`
-            )
+          conflictIds.add(
+            `${eventB.member_name}-${eventB.google_event_id}`
+          )
 
-            pairs.push({
-                memberA: eventA.member_name,
-                memberB: eventB.member_name,
-                start: new Date(
-                Math.max(startA.getTime(), startB.getTime())
-                ),
-                end: new Date(
-                Math.min(endA.getTime(), endB.getTime())
-                ),
-            })
+          pairs.push({
+            memberA: eventA.member_name,
+            memberB: eventB.member_name,
+            start: new Date(
+              Math.max(startA.getTime(), startB.getTime())
+            ),
+            end: new Date(
+              Math.min(endA.getTime(), endB.getTime())
+            ),
+          })
         }
       }
     }
 
-    setConflictPairs(pairs)
-
-    return conflictIds
+    return {
+      conflictIds,
+      pairs,
+    }
 
   }, [rawEvents, visibleRange])
 
@@ -293,49 +295,49 @@ const Calendar = () => {
 
           {/* Conflict Warning */}
 
-            {conflictPairs.length > 0 && (
-                <div className="alert alert-warning mb-5">
-                    <div className="w-full">
+            {calculatedConflictPairs.length > 0 && (
+              <div className="alert alert-warning mb-5">
+                <div className="w-full">
 
-                    <div className="font-bold">
-                        ⚠ {conflictPairs.length}{' '}
-                        {conflictPairs.length === 1
-                        ? 'Scheduling Conflict'
-                        : 'Scheduling Conflicts'}
-                    </div>
+                  <div className="font-bold">
+                    ⚠ {calculatedConflictPairs.length}{' '}
+                    {calculatedConflictPairs.length === 1
+                      ? 'Scheduling Conflict'
+                      : 'Scheduling Conflicts'}
+                  </div>
 
-                    <div className="mt-2 space-y-1">
-                        {conflictPairs.map((conflict, index) => (
-                        <div
-                            key={index}
-                            className="text-sm"
-                        >
-                            <strong>
-                            {conflict.memberA} ↔ {conflict.memberB}
-                            </strong>
+                  <div className="mt-2 space-y-1">
+                    {calculatedConflictPairs.map((conflict, index) => (
+                      <div
+                        key={index}
+                        className="text-sm"
+                      >
+                        <strong>
+                          {conflict.memberA} ↔ {conflict.memberB}
+                        </strong>
 
-                            {' — '}
+                        {' — '}
 
-                            {conflict.start.toLocaleString([], {
-                                weekday: 'short',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                hour12: false,
-                            })}
+                        {conflict.start.toLocaleString([], {
+                          weekday: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: false,
+                        })}
 
-                            {' – '}
+                        {' – '}
 
-                            {conflict.end.toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                hour12: false,
-                            })}
-                        </div>
-                        ))}
-                    </div>
+                        {conflict.end.toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: false,
+                        })}
+                      </div>
+                    ))}
+                  </div>
 
-                    </div>
                 </div>
+              </div>
             )}
 
 
